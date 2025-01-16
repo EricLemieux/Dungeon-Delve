@@ -1,29 +1,20 @@
 package com.lemieuxdev
 
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
 import io.ktor.server.html.*
-import io.ktor.server.http.content.*
-import io.ktor.server.plugins.calllogging.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.websocket.*
-import io.ktor.websocket.*
-import java.time.Duration
 import kotlin.random.Random
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.html.*
-import org.slf4j.event.*
 
 class Game(var foo: Int = 100, var player: Player?, var monster: Monster?)
-class Player(var attack:Int=10)
+class Player(var attack: Int = 10)
+
 fun Player.hitMonster(monster: Monster) {
-    monster.health-=attack
+    monster.health -= attack
 }
+
 class Monster(var health: Int = 50)
+
 val game = Game(player = Player(), monster = Monster())
 
 fun Application.configureTemplating() {
@@ -32,14 +23,60 @@ fun Application.configureTemplating() {
 
         get("/") {
             call.respondHtml {
-                body{
-                    h1{
-                        +"The monster has ${game.monster?.health} HP"
+                head {
+                    title { +"Title" }
+                    link(rel = "stylesheet", href = "/static/output.css")
+                    script(src = "https://unpkg.com/htmx.org@2.0.4") {}
+                    script {
+                        unsafe {
+                            raw(
+                                """
+                                  if (localStorage.theme === 'light') {
+                                    document.documentElement.classList.remove('dark')
+                                  } else {
+                                    document.documentElement.classList.add('dark')
+                                  }
+                                """
+                            )
+                        }
+                    }
+                }
+                body {
+                    attributes["hx-boost"] = "true"
+                    main {
+                        // sidebar
+                        div {}
+
+                        // game
+                        div {
+                            // attack
+                            div {
+                                attributes["hx-post"] = "/gamescreen/attack"
+                                +"Attack"
+                            }
+
+                            // move
+                            div {
+                            }
+                        }
+                    }
+                    h1 {
                     }
                 }
             }
+        }
+
+        post("/gamescreen/attack") {
+            // todo: get the monster target somehow
 
             game.player?.hitMonster(game.monster!!)
+
+            // todo: make general response html
+//                call.respondHtml {
+//                    div {
+//                        +"The monster has ${game.monster?.health} HP"
+//                    }
+//                }
         }
 
         get("/more-rows") {
