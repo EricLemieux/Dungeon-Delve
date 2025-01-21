@@ -1,0 +1,16 @@
+{
+  "name": "dashboard",
+  "version": "1.0.0",
+  "description": "## TODO:",
+  "main": "index.js",
+  "scripts": {
+    "build": "tailwind -i server/src/main/resources/input.css -o server/src/main/resources/static/output.css",
+    "dev": "tailwind -i server/src/main/resources/input.css -o server/src/main/resources/static/output.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.14"
+  }
+}
