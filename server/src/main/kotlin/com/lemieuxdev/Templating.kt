@@ -17,52 +17,60 @@ class Monster(var health: Int = 50)
 
 val game = Game(player = Player(), monster = Monster())
 
+fun HTML.gameBoard(gameState: Game) {
+    head {
+        title { +"Title" }
+        link(rel = "stylesheet", href = "/static/output.css")
+        script(src = "https://unpkg.com/htmx.org@2.0.4") {}
+        script {
+            unsafe {
+                // language=javascript
+                raw(
+                    """
+                      if (localStorage.theme === 'light') {
+                        document.documentElement.classList.remove('dark')
+                      } else {
+                        document.documentElement.classList.add('dark')
+                      }
+                    """
+                )
+            }
+        }
+    }
+    body {
+        attributes["hx-boost"] = "true"
+
+        main{
+            id = "game-board"
+
+            div {
+                +"Monster health: ${gameState.monster?.health}"
+            }
+
+            // game
+            div {
+                // attack
+                div {
+                    attributes["hx-post"] = "/gamescreen/attack"
+                    attributes["hx-target"] = "#game-board"
+                    +"Attack"
+                }
+
+                // move
+                div {
+                }
+            }
+        }
+    }
+}
+
 fun Application.configureTemplating() {
     routing {
         val random = Random(System.currentTimeMillis())
 
         get("/") {
             call.respondHtml {
-                head {
-                    title { +"Title" }
-                    link(rel = "stylesheet", href = "/static/output.css")
-                    script(src = "https://unpkg.com/htmx.org@2.0.4") {}
-                    script {
-                        unsafe {
-                            raw(
-                                """
-                                  if (localStorage.theme === 'light') {
-                                    document.documentElement.classList.remove('dark')
-                                  } else {
-                                    document.documentElement.classList.add('dark')
-                                  }
-                                """
-                            )
-                        }
-                    }
-                }
-                body {
-                    attributes["hx-boost"] = "true"
-                    main {
-                        // sidebar
-                        div {}
-
-                        // game
-                        div {
-                            // attack
-                            div {
-                                attributes["hx-post"] = "/gamescreen/attack"
-                                +"Attack"
-                            }
-
-                            // move
-                            div {
-                            }
-                        }
-                    }
-                    h1 {
-                    }
-                }
+                gameBoard(game)
             }
         }
 
@@ -71,23 +79,8 @@ fun Application.configureTemplating() {
 
             game.player?.hitMonster(game.monster!!)
 
-            // todo: make general response html
-//                call.respondHtml {
-//                    div {
-//                        +"The monster has ${game.monster?.health} HP"
-//                    }
-//                }
-        }
-
-        get("/more-rows") {
             call.respondHtml {
-                body {
-                    table {
-                        tbody {
-                            +game.foo
-                        }
-                    }
-                }
+                gameBoard(game)
             }
         }
     }
