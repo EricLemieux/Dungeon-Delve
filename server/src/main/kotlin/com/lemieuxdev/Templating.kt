@@ -2,6 +2,7 @@ package com.lemieuxdev
 
 import io.ktor.server.application.*
 import io.ktor.server.html.*
+import io.ktor.server.http.content.staticResources
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
@@ -98,6 +99,9 @@ fun Application.configureTemplating() {
     }
 
     routing {
+        staticResources("/static", "static")
+        staticResources("/", "/web")
+
         get("/") {
             call.respondHtml {
                 gameBoardWrapper(game)

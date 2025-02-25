@@ -7,9 +7,6 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    configureSecurity()
     configureMonitoring()
-    configureSerialization()
     configureTemplating()
-    configureRouting()
 }
