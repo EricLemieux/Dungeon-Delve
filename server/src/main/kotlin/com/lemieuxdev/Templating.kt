@@ -1,12 +1,8 @@
 package com.lemieuxdev
 
-import io.ktor.http.CacheControl
-import io.ktor.http.ContentType
 import io.ktor.server.application.*
 import io.ktor.server.html.*
 import io.ktor.server.http.content.staticResources
-import io.ktor.server.response.cacheControl
-import io.ktor.server.response.respondTextWriter
 import io.ktor.server.routing.*
 import io.ktor.server.sse.SSE
 import io.ktor.server.sse.sse
@@ -15,8 +11,6 @@ import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
 import io.ktor.sse.ServerSentEvent
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.flow.toSet
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
 import java.time.LocalDateTime
