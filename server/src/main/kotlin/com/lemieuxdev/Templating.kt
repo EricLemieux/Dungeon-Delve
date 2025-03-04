@@ -1,18 +1,22 @@
 package com.lemieuxdev
 
+import io.ktor.http.CacheControl
+import io.ktor.http.ContentType
 import io.ktor.server.application.*
 import io.ktor.server.html.*
 import io.ktor.server.http.content.staticResources
+import io.ktor.server.response.cacheControl
+import io.ktor.server.response.respondTextWriter
 import io.ktor.server.routing.*
+import io.ktor.server.sse.SSE
+import io.ktor.server.sse.sse
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
-import io.ktor.server.websocket.webSocket
-import io.ktor.websocket.Frame
-import io.ktor.websocket.readText
-import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.launch
-import kotlin.random.Random
+import io.ktor.sse.ServerSentEvent
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.toSet
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
 import java.time.LocalDateTime
@@ -29,12 +33,14 @@ class Monster(var health: Int = 50)
 
 val game = Game(player = Player(), monster = Monster())
 
+val sseEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 64)
+
 fun HTML.gameBoardWrapper(gameState: Game) {
     head {
         title { +"Title" }
         link(rel = "stylesheet", href = "/static/output.css")
         script(src = "https://unpkg.com/htmx.org@2.0.4") {}
-        script(src = "https://unpkg.com/htmx.org@1.9.12/dist/ext/ws.js") {}
+        script(src = "https://unpkg.com/htmx-ext-sse@2.2.2") {}
         script {
             unsafe {
                 // language=javascript
@@ -52,6 +58,10 @@ fun HTML.gameBoardWrapper(gameState: Game) {
     }
     body {
         attributes["hx-boost"] = "true"
+        attributes["hx-ext"] = "sse"
+        attributes["sse-connect"]="/events"
+        attributes["sse-swap"]="message"
+        attributes["hx-target"] = "#game-board"
 
         main {
             gameBoard(game)
@@ -61,8 +71,6 @@ fun HTML.gameBoardWrapper(gameState: Game) {
 
 fun MAIN.gameBoard(gameState: Game) {
     id = "game-board"
-    attributes["hx-ext"] = "ws"
-    attributes["ws-connect"] = "/ws"
 
     div {
         +"Monster health: ${gameState.monster?.health}"
@@ -97,6 +105,7 @@ fun Application.configureTemplating() {
         maxFrameSize = Long.MAX_VALUE
         masking = false
     }
+    install(SSE)
 
     routing {
         staticResources("/static", "static")
@@ -113,25 +122,20 @@ fun Application.configureTemplating() {
 
             game.player?.hitMonster(game.monster!!)
 
+            val gameBoard = createHTML().main {
+                gameBoard(game)
+            }
+            sseEvents.emit(gameBoard)
+
             call.respondHtml {
                 gameBoardWrapper(game)
             }
         }
 
-        webSocket("/ws") {
-            launch {
-                val html = createHTML().main {
-                    gameBoard(game)
+        sse("/events") {
+                sseEvents.collect { event ->
+                   send(ServerSentEvent(event))
                 }
-                send(Frame.Text(html.toString()))
-            }
-
-            // Handle incoming messages (optional)
-//            incoming.consumeEach { frame ->
-//                if (frame is Frame.Text) {
-//                    println("Received: ${frame.readText()}")
-//                }
-//            }
         }
     }
 }
