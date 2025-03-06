@@ -21,7 +21,7 @@ import kotlinx.html.stream.createHTML
 import java.time.LocalDateTime
 import kotlin.time.Duration.Companion.seconds
 
-class Game(var foo: Int = 100, var player: Player?, var monster: Monster?, var outputText: String = "")
+class Game(var foo: Int = 100, var player: Player?, var monster: Monster?, var outputText: String = "", var showStart: Boolean = true, var showContinue : Boolean = false)
 class Player(var attack: Int = 10)
 
 fun Player.hitMonster(monster: Monster) {
@@ -119,14 +119,6 @@ fun MAIN.gameBoard(gameState: Game) {
                 div {
                     classes = "relative min-h-[60vh] font-mono text-sm text-green-500 md:text-base".split(" ").toSet()
 
-                    // Game controls
-                    button {
-                        attributes["hx-post"] = "/gamescreen/attack"
-                        attributes["hx-swap"] = "none"
-                        classes = "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4".split(" ").toSet()
-                        +"START MISSION"
-                    }
-
                     // Output text
                     pre {
                         classes = "whitespace-pre-wrap".split(" ").toSet()
@@ -137,6 +129,29 @@ fun MAIN.gameBoard(gameState: Game) {
                         classes = "inline-block h-4 w-2 animate-blink bg-green-500".split(" ").toSet()
                         +" "
                     }
+
+                    // Game controls
+                    // TODO: refactor this so that it's an object or list or something that controls this
+                    if (game.showStart) {
+                        button {
+                            attributes["hx-post"] = "/gamescreen/attack"
+                            attributes["hx-swap"] = "none"
+                            classes =
+                                "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4".split(
+                                    " "
+                                ).toSet()
+                            +"START"
+                        }
+                    }
+                    if (game.showContinue) {
+                    button {
+                        attributes["hx-post"] = "/gamescreen/attack"
+                        attributes["hx-swap"] = "none"
+                        classes = "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4".split(" ").toSet()
+                        +"Approach"
+                    }
+                    }
+
                 }
             }
 
@@ -170,6 +185,7 @@ fun Application.configureTemplating() {
         post("/gamescreen/attack") {
             // todo: get the monster target somehow
 
+            game.showStart = false
             game.player?.hitMonster(game.monster!!)
 
             call.respondHtml(HttpStatusCode.OK) {}
@@ -185,6 +201,12 @@ fun Application.configureTemplating() {
                 }
                 sseEvents.emit(gameBoard)
             }
+
+            game.showContinue = true
+            val gameBoard = createHTML().main {
+                gameBoard(game)
+            }
+            sseEvents.emit(gameBoard)
         }
 
         sse("/events") {
