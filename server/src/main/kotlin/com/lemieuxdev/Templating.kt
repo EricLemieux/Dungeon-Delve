@@ -77,17 +77,17 @@ fun MAIN.gameBoard(gameState: Game) {
 
     // game
     div {
-//        // attack
-//        button {
-//            attributes["hx-post"] = "/gamescreen/attack"
-////            attributes["hx-target"] = "#game-board"
-//            attributes["hx-swap"] = "none"
-//            classes =
-//                "px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 active:bg-red-800".split(
-//                    " "
-//                ).toSet()
-//            +"Attack"
-//        }
+        // attack
+        button {
+            attributes["hx-post"] = "/gamescreen/attack"
+//            attributes["hx-target"] = "#game-board"
+            attributes["hx-swap"] = "none"
+            classes =
+                "px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 active:bg-red-800".split(
+                    " "
+                ).toSet()
+            +"Start"
+        }
 //
 //        // move
 //        div {
