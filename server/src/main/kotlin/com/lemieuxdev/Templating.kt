@@ -117,7 +117,7 @@ fun MAIN.gameBoard(gameState: Game) {
 
                 // Terminal content
                 div {
-                    classes = "relative min-h-[60vh] font-mono text-sm text-green-500 md:text-base".split(" ").toSet()
+                    classes = "flex flex-col gap-2 relative min-h-[60vh] font-mono text-sm text-green-500 md:text-base".split(" ").toSet()
 
                     // Output text
                     pre {
@@ -125,9 +125,11 @@ fun MAIN.gameBoard(gameState: Game) {
                         +gameState.outputText
                     }
                     // Blinking cursor
-                    span {
-                        classes = "inline-block h-4 w-2 animate-blink bg-green-500".split(" ").toSet()
-                        +" "
+                    if(!game.showStart) {
+                        span {
+                            classes = "inline-block h-4 w-2 animate-blink bg-green-500".split(" ").toSet()
+                            +" "
+                        }
                     }
 
                     // Game controls
