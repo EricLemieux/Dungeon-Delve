@@ -71,30 +71,30 @@ fun HTML.gameBoardWrapper(gameState: Game) {
 fun MAIN.gameBoard(gameState: Game) {
     id = "game-board"
 
-    div {
-        +"Monster health: ${gameState.monster?.health}"
-    }
+//    div {
+//        +"Monster health: ${gameState.monster?.health}"
+//    }
 
     // game
     div {
-        // attack
-        button {
-            attributes["hx-post"] = "/gamescreen/attack"
-//            attributes["hx-target"] = "#game-board"
-            attributes["hx-swap"] = "none"
-            classes =
-                "px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 active:bg-red-800".split(
-                    " "
-                ).toSet()
-            +"Attack"
-        }
-
-        // move
-        div {
-            p {
-                +"${LocalDateTime.now()}"
-            }
-        }
+//        // attack
+//        button {
+//            attributes["hx-post"] = "/gamescreen/attack"
+////            attributes["hx-target"] = "#game-board"
+//            attributes["hx-swap"] = "none"
+//            classes =
+//                "px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 active:bg-red-800".split(
+//                    " "
+//                ).toSet()
+//            +"Attack"
+//        }
+//
+//        // move
+//        div {
+//            p {
+//                +"${LocalDateTime.now()}"
+//            }
+//        }
 
         // Scrolling text
         div {
@@ -132,10 +132,10 @@ fun Application.configureTemplating() {
             call.respondHtml(HttpStatusCode.OK) {}
 
             // TODO: move this somewhere elese, or make this part of the rendering
-            val hardcodedText = "Hello world, this is a test. I am a computer, beep boop.".split(" ")
+            val hardcodedText = "You awaken on a cold, uneven stone floor, the air thick with the damp scent of moss and earth. Faint echoes drip from unseen crevices, and the dim glow of phosphorescent fungi outlines jagged walls around you. As you rise, the weight of silence presses against your ears, broken only by the crunch of gravel beneath your boots. A narrow passage leads you forward, its walls narrowing before spilling you into blinding sunlight. Shielding your eyes, you step into the open and behold a vast, windswept desert stretching endlessly before you. Dominating the horizon stands a colossal pyramid, its golden surface shimmering under the sun, ancient and foreboding. The air hums with a strange energy, and a faint, unearthly whisper brushes your mind, urging you closer.".split(" ")
 
             repeat(hardcodedText.size) { i ->
-                delay(0.125.seconds)
+                delay(0.05.seconds)
                 game.outputText = hardcodedText.slice(0..i).joinToString(" ")
                 val gameBoard = createHTML().main {
                     gameBoard(game)
