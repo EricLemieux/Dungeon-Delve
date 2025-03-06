@@ -1,5 +1,6 @@
 package com.lemieuxdev
 
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
 import io.ktor.server.html.*
 import io.ktor.server.http.content.staticResources
@@ -10,7 +11,11 @@ import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
 import io.ktor.sse.ServerSentEvent
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
 import java.time.LocalDateTime
@@ -75,7 +80,8 @@ fun MAIN.gameBoard(gameState: Game) {
         // attack
         button {
             attributes["hx-post"] = "/gamescreen/attack"
-            attributes["hx-target"] = "#game-board"
+//            attributes["hx-target"] = "#game-board"
+            attributes["hx-swap"] = "none"
             classes =
                 "px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 active:bg-red-800".split(
                     " "
@@ -114,15 +120,15 @@ fun Application.configureTemplating() {
         post("/gamescreen/attack") {
             // todo: get the monster target somehow
 
-            game.player?.hitMonster(game.monster!!)
+            call.respondHtml(HttpStatusCode.OK) {}
 
-            val gameBoard = createHTML().main {
-                gameBoard(game)
-            }
-            sseEvents.emit(gameBoard)
-
-            call.respondHtml {
-                gameBoardWrapper(game)
+            repeat(10) {
+                delay(0.125.seconds)
+                game.player?.hitMonster(game.monster!!)
+                val gameBoard = createHTML().main {
+                    gameBoard(game)
+                }
+                sseEvents.emit(gameBoard)
             }
         }
 
