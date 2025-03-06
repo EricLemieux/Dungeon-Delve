@@ -21,7 +21,7 @@ import kotlinx.html.stream.createHTML
 import java.time.LocalDateTime
 import kotlin.time.Duration.Companion.seconds
 
-class Game(var foo: Int = 100, var player: Player?, var monster: Monster?)
+class Game(var foo: Int = 100, var player: Player?, var monster: Monster?, var outputText: String = "")
 class Player(var attack: Int = 10)
 
 fun Player.hitMonster(monster: Monster) {
@@ -95,6 +95,13 @@ fun MAIN.gameBoard(gameState: Game) {
                 +"${LocalDateTime.now()}"
             }
         }
+
+        // Scrolling text
+        div {
+            p {
+                +gameState.outputText
+            }
+        }
     }
 }
 
@@ -120,11 +127,16 @@ fun Application.configureTemplating() {
         post("/gamescreen/attack") {
             // todo: get the monster target somehow
 
+            game.player?.hitMonster(game.monster!!)
+
             call.respondHtml(HttpStatusCode.OK) {}
 
-            repeat(10) {
+            // TODO: move this somewhere elese, or make this part of the rendering
+            val hardcodedText = "Hello world, this is a test. I am a computer, beep boop.".split(" ")
+
+            repeat(hardcodedText.size) { i ->
                 delay(0.125.seconds)
-                game.player?.hitMonster(game.monster!!)
+                game.outputText = hardcodedText.slice(0..i).joinToString(" ")
                 val gameBoard = createHTML().main {
                     gameBoard(game)
                 }
@@ -139,3 +151,7 @@ fun Application.configureTemplating() {
         }
     }
 }
+
+/**
+ * The main appliction here should be registering adventures, should be an interface, should take in the event emiter
+ */
