@@ -11,17 +11,43 @@ import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
 import io.ktor.sse.ServerSentEvent
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.launch
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
-import java.time.LocalDateTime
 import kotlin.time.Duration.Companion.seconds
 
-class Game(var foo: Int = 100, var player: Player?, var monster: Monster?, var outputText: String = "", var showStart: Boolean = true, var showContinue : Boolean = false)
+/**
+ * Highest level, this is the adventure, it would contain the game state, and the scenes for the adventure.
+ */
+interface Adventure
+
+/**
+ * This is an individual scene, adventures are made up of scenes that connect to each other.
+ */
+interface Scene
+
+interface AdventureState
+interface SceneState
+
+// TODO: should this be an interface?
+data class Action(
+    val name: String,
+    val run: () -> Unit,
+)
+
+class Game(
+    var foo: Int = 100,
+    var player: Player?,
+    var monster: Monster?,
+    var outputText: String = "",
+    var showStart: Boolean = true,
+    var showContinue : Boolean = false,
+
+    // Actions that the user can take.
+    val actions: List<Action> = emptyList(),
+)
+
 class Player(var attack: Int = 10)
 
 fun Player.hitMonster(monster: Monster) {
@@ -166,12 +192,6 @@ fun MAIN.gameBoard(gameState: Game) {
 }
 
 fun Application.configureTemplating() {
-    install(WebSockets) {
-        pingPeriod = 15.seconds
-        timeout = 15.seconds
-        maxFrameSize = Long.MAX_VALUE
-        masking = false
-    }
     install(SSE)
 
     routing {
@@ -209,6 +229,13 @@ fun Application.configureTemplating() {
                 gameBoard(game)
             }
             sseEvents.emit(gameBoard)
+        }
+
+        post("/action/{actionId}") {
+            val actionId = call.parameters["actionId"]
+
+            // TODO: find a matching action in the game/adventure/scene then execute the associated lambda
+            // TODO: 404 if not found
         }
 
         sse("/events") {
