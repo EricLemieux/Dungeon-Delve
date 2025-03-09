@@ -18,14 +18,24 @@ import kotlinx.html.stream.createHTML
  * Highest level, this is the adventure, it would contain the game state, and the scenes for the
  * adventure.
  */
-interface Adventure
+interface Adventure {
+    var state: AdventureState
+}
+interface AdventureState {
+    var actions: List<Action>
+}
 
 /** This is an individual scene, adventures are made up of scenes that connect to each other. */
-interface Scene
+interface Scene {
+    var state: SceneState
 
-interface AdventureState
-
-interface SceneState
+    // TODO: This needs to be changed so that it can return the rendered html
+    // TODO: Maybe change this so that it's another interface that does the render, allowing for different syling
+    fun render(): FlowContent
+}
+interface SceneState {
+    var actions: List<Action>
+}
 
 // TODO: should this be an interface?
 data class Action(
@@ -68,12 +78,12 @@ fun HTML.gameBoardWrapper(gameState: Game) {
         // language=javascript
         raw(
             """
-                      if (localStorage.theme === 'light') {
-                        document.documentElement.classList.remove('dark')
-                      } else {
-                        document.documentElement.classList.add('dark')
-                      }
-                    """
+                if (localStorage.theme === 'light') {
+                  document.documentElement.classList.remove('dark')
+                } else {
+                  document.documentElement.classList.add('dark')
+                }
+            """
                 .trimIndent())
       }
     }
@@ -254,3 +264,8 @@ fun Application.configureTemplating() {
  * The main appliction here should be registering adventures, should be an interface, should take in
  * the event emiter
  */
+
+
+fun foo() {
+    val scene = Scene()
+}
