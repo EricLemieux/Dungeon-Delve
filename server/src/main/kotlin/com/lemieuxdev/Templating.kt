@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
 
+// TODO: should this be an interface?
+data class Action(
+    val name: String,
+    val run: () -> Unit,
+)
+
 /**
  * Highest level, this is the adventure, it would contain the game state, and the scenes for the
  * adventure.
@@ -25,24 +31,43 @@ interface AdventureState {
     var actions: List<Action>
 }
 
+class DefaultAdventureState(): AdventureState {
+    override var actions: List<Action> = listOf(Action("test") {
+        println("Testing")
+    })
+}
+
 /** This is an individual scene, adventures are made up of scenes that connect to each other. */
 interface Scene {
     var state: SceneState
-
-    // TODO: This needs to be changed so that it can return the rendered html
-    // TODO: Maybe change this so that it's another interface that does the render, allowing for different syling
-    fun render(): FlowContent
 }
 interface SceneState {
     var actions: List<Action>
 }
 
-// TODO: should this be an interface?
-data class Action(
-    val name: String,
-    val run: () -> Unit,
-)
+class DefaultSceneState(override var actions: List<Action> = listOf(Action("scene test") {
+    println("scene test")
+})): SceneState
 
+/**
+ * Display controls, this dictates the presentation of the game state to the users.
+ */
+interface Display {
+    /**
+     * Render as html
+     */
+    fun render(adventureState: AdventureState, sceneState: SceneState): FlowContent.() -> Unit {
+        println("rendering")
+        return {
+            h1{
+                +"TODO"
+            }
+        }
+    }
+}
+class DefaultDisplay(): Display {}
+
+// TODO: Refactor or remove this
 class Game(
     var foo: Int = 100,
     var player: Player?,
@@ -99,8 +124,17 @@ fun HTML.gameBoardWrapper(gameState: Game) {
   }
 }
 
+val adventureState: AdventureState = DefaultAdventureState()
+val sceneState: SceneState = DefaultSceneState()
+val display: Display = DefaultDisplay()
+
 fun MAIN.gameBoard(gameState: Game) {
   id = "game-board"
+
+    div {
+        id="foo"
+        apply(display.render(adventureState, sceneState))
+    }
 
   div {
     classes = "flex min-h-screen items-center justify-center bg-gray-900 p-4".split(" ").toSet()
@@ -264,8 +298,3 @@ fun Application.configureTemplating() {
  * The main appliction here should be registering adventures, should be an interface, should take in
  * the event emiter
  */
-
-
-fun foo() {
-    val scene = Scene()
-}
