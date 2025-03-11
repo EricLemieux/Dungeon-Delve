@@ -42,10 +42,13 @@ interface Scene {
     var state: SceneState
 }
 interface SceneState {
+    var outputText: String
     var actions: List<Action>
 }
 
-class DefaultSceneState(override var actions: List<Action> = listOf(Action("scene test") {
+class DefaultSceneState(
+    override var outputText: String= "",
+    override var actions: List<Action> = listOf(Action("scene test") {
     println("scene test")
 })): SceneState
 
@@ -66,6 +69,124 @@ interface Display {
     }
 }
 class DefaultDisplay(): Display {}
+
+class TerminalDisplay(): Display {
+    override fun render(adventureState: AdventureState, sceneState: SceneState): FlowContent.() -> Unit {
+        return {
+            div {
+                classes = "flex min-h-screen items-center justify-center bg-gray-900 p-4".split(" ").toSet()
+
+                div {
+                    classes =
+                        "relative w-full max-w-3xl overflow-hidden rounded-lg border-8 border-gray-800 bg-gray-900 shadow-2xl"
+                            .split(" ")
+                            .toSet()
+
+                    // Monitor frame gradient
+                    div {
+                        classes =
+                            "absolute inset-0 rounded-sm bg-gradient-to-b from-gray-800 to-gray-700 opacity-10"
+                                .split(" ")
+                                .toSet()
+                    }
+
+                    // Power indicator
+                    div {
+                        classes = "absolute right-4 top-4 flex items-center gap-2".split(" ").toSet()
+
+                        div {
+                            classes =
+                                "h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_2px_rgba(74,222,128,0.6)]"
+                                    .split(" ")
+                                    .toSet()
+                        }
+
+                        // Terminal icon placeholder (you might need to add an actual icon here)
+                        div { classes = "h-4 w-4 text-gray-600".split(" ").toSet() }
+                    }
+
+                    // Screen with CRT effect
+                    div {
+                        classes = "relative overflow-hidden rounded-sm bg-black p-6 shadow-inner".split(" ").toSet()
+
+                        // CRT glow
+                        div {
+                            classes =
+                                "pointer-events-none absolute inset-0 rounded-sm bg-green-500 opacity-[0.03] mix-blend-screen"
+                                    .split(" ")
+                                    .toSet()
+                        }
+
+                        // Scan lines
+                        div {
+                            classes =
+                                "pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent,transparent_2px,rgba(0,0,0,0.05)_3px,transparent_3px)] bg-[length:100%_4px]"
+                                    .split(" ")
+                                    .toSet()
+                        }
+
+                        // Screen curvature
+                        div {
+                            classes =
+                                "pointer-events-none absolute inset-0 rounded-sm bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.3)_100%)]"
+                                    .split(" ")
+                                    .toSet()
+                        }
+
+                        // Terminal content
+                        div {
+                            classes =
+                                "flex flex-col gap-2 relative min-h-[60vh] font-mono text-sm text-green-500 md:text-base"
+                                    .split(" ")
+                                    .toSet()
+
+                            // Output text
+                            pre {
+                                classes = "whitespace-pre-wrap".split(" ").toSet()
+                                +sceneState.outputText
+                            }
+                            // Blinking cursor
+                            if (!game.showStart) {
+                                span {
+                                    classes = "inline-block h-4 w-2 animate-blink bg-green-500".split(" ").toSet()
+                                    +" "
+                                }
+                            }
+
+                            // Game controls
+                            // TODO: refactor this so that it's an object or list or something that controls this
+                            if (game.showStart) {
+                                button {
+                                    attributes["hx-post"] = "/gamescreen/attack"
+                                    attributes["hx-swap"] = "none"
+                                    classes =
+                                        "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4"
+                                            .split(" ")
+                                            .toSet()
+                                    +"START"
+                                }
+                            }
+                            if (game.showContinue) {
+                                button {
+                                    attributes["hx-post"] = "/gamescreen/attack"
+                                    attributes["hx-swap"] = "none"
+                                    classes =
+                                        "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4"
+                                            .split(" ")
+                                            .toSet()
+                                    +"Approach"
+                                }
+                            }
+                        }
+                    }
+
+                    // Monitor base
+                    div { classes = "h-4 rounded-b-lg bg-gray-800".split(" ").toSet() }
+                }
+            }
+        }
+    }
+}
 
 // TODO: Refactor or remove this
 class Game(
@@ -126,127 +247,12 @@ fun HTML.gameBoardWrapper(gameState: Game) {
 
 val adventureState: AdventureState = DefaultAdventureState()
 val sceneState: SceneState = DefaultSceneState()
-val display: Display = DefaultDisplay()
+val display: Display = TerminalDisplay()
 
 fun MAIN.gameBoard(gameState: Game) {
   id = "game-board"
 
-    div {
-        id="foo"
-        apply(display.render(adventureState, sceneState))
-    }
-
-  div {
-    classes = "flex min-h-screen items-center justify-center bg-gray-900 p-4".split(" ").toSet()
-
-    div {
-      classes =
-          "relative w-full max-w-3xl overflow-hidden rounded-lg border-8 border-gray-800 bg-gray-900 shadow-2xl"
-              .split(" ")
-              .toSet()
-
-      // Monitor frame gradient
-      div {
-        classes =
-            "absolute inset-0 rounded-sm bg-gradient-to-b from-gray-800 to-gray-700 opacity-10"
-                .split(" ")
-                .toSet()
-      }
-
-      // Power indicator
-      div {
-        classes = "absolute right-4 top-4 flex items-center gap-2".split(" ").toSet()
-
-        div {
-          classes =
-              "h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_2px_rgba(74,222,128,0.6)]"
-                  .split(" ")
-                  .toSet()
-        }
-
-        // Terminal icon placeholder (you might need to add an actual icon here)
-        div { classes = "h-4 w-4 text-gray-600".split(" ").toSet() }
-      }
-
-      // Screen with CRT effect
-      div {
-        classes = "relative overflow-hidden rounded-sm bg-black p-6 shadow-inner".split(" ").toSet()
-
-        // CRT glow
-        div {
-          classes =
-              "pointer-events-none absolute inset-0 rounded-sm bg-green-500 opacity-[0.03] mix-blend-screen"
-                  .split(" ")
-                  .toSet()
-        }
-
-        // Scan lines
-        div {
-          classes =
-              "pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent,transparent_2px,rgba(0,0,0,0.05)_3px,transparent_3px)] bg-[length:100%_4px]"
-                  .split(" ")
-                  .toSet()
-        }
-
-        // Screen curvature
-        div {
-          classes =
-              "pointer-events-none absolute inset-0 rounded-sm bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.3)_100%)]"
-                  .split(" ")
-                  .toSet()
-        }
-
-        // Terminal content
-        div {
-          classes =
-              "flex flex-col gap-2 relative min-h-[60vh] font-mono text-sm text-green-500 md:text-base"
-                  .split(" ")
-                  .toSet()
-
-          // Output text
-          pre {
-            classes = "whitespace-pre-wrap".split(" ").toSet()
-            +gameState.outputText
-          }
-          // Blinking cursor
-          if (!game.showStart) {
-            span {
-              classes = "inline-block h-4 w-2 animate-blink bg-green-500".split(" ").toSet()
-              +" "
-            }
-          }
-
-          // Game controls
-          // TODO: refactor this so that it's an object or list or something that controls this
-          if (game.showStart) {
-            button {
-              attributes["hx-post"] = "/gamescreen/attack"
-              attributes["hx-swap"] = "none"
-              classes =
-                  "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4"
-                      .split(" ")
-                      .toSet()
-              +"START"
-            }
-          }
-          if (game.showContinue) {
-            button {
-              attributes["hx-post"] = "/gamescreen/attack"
-              attributes["hx-swap"] = "none"
-              classes =
-                  "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4"
-                      .split(" ")
-                      .toSet()
-              +"Approach"
-            }
-          }
-        }
-      }
-
-      // Monitor base
-      div { classes = "h-4 rounded-b-lg bg-gray-800".split(" ").toSet() }
-    }
-  }
+  apply(display.render(adventureState, sceneState))
 }
 
 fun Application.configureTemplating() {
@@ -273,7 +279,7 @@ fun Application.configureTemplating() {
 
       repeat(hardcodedText.size) { i ->
         delay(0.05.seconds)
-        game.outputText = hardcodedText.slice(0..i).joinToString(" ")
+        sceneState.outputText = hardcodedText.slice(0..i).joinToString(" ")
         val gameBoard = createHTML().main { gameBoard(game) }
         sseEvents.emit(gameBoard)
       }
