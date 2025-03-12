@@ -260,7 +260,12 @@ val sceneState: SceneState =
 
                   // After text is fully revealed, add the Approach action
                   sceneState.actions =
-                      listOf(Action("Approach") { sceneState.outputText = "Halt!" })
+                      listOf(
+                          Action("Approach") {
+                            sceneState.outputText = "\"Halt!\""
+                            val gameBoard = createHTML().main { gameBoard(game) }
+                            sseEvents.emit(gameBoard)
+                          })
 
                   // Keep the cursor visible
                   sceneState.showCursor = true
