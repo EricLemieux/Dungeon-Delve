@@ -14,11 +14,30 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
 
-// TODO: should this be an interface?
-data class Action(
+class Action(
     val name: String,
-    val run: suspend () -> Unit,
-)
+
+    /**
+     * Expression to be run when the action is triggered.
+     * There are pre- and post-processing steps that can also be configured to run.
+     */
+    private val process: suspend () -> Unit = {},
+) {
+    private val preProcess: suspend () -> Unit = {}
+    private val postProcess: suspend () -> Unit = {
+        val gameBoard = createHTML().main { gameBoard(game) }
+        sseEvents.emit(gameBoard)
+    }
+
+    /**
+     * This is the way that the action should be called to ensure that the pre and post-processing steps are being called.
+     */
+    suspend fun run() {
+        preProcess()
+        process()
+        postProcess()
+    }
+}
 
 /**
  * Highest level, this is the adventure, it would contain the game state, and the scenes for the
@@ -258,20 +277,15 @@ val sceneState: SceneState =
                     sseEvents.emit(gameBoard)
                   }
 
-                  // After text is fully revealed, add the Approach action
+                  // After the text is fully revealed, add the Approach action
                   sceneState.actions =
                       listOf(
                           Action("Approach") {
                             sceneState.outputText = "\"Halt!\""
-                            val gameBoard = createHTML().main { gameBoard(game) }
-                            sseEvents.emit(gameBoard)
                           })
 
                   // Keep the cursor visible
                   sceneState.showCursor = true
-
-                  val gameBoard = createHTML().main { gameBoard(game) }
-                  sseEvents.emit(gameBoard)
                 }))
 val display: Display = TerminalDisplay()
 
