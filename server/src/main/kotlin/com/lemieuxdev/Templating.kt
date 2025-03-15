@@ -213,19 +213,45 @@ val sseEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 64)
 
 fun HTML.gameBoardWrapper(gameState: Game) {
   head {
-    title { +"Title" }
+    title { +"Dungeon Delve" }
+    // PWA meta tags
+    meta(name = "viewport", content = "width=device-width, initial-scale=1.0")
+    meta(name = "theme-color", content = "#000000")
+    meta(name = "description", content = "A text-based dungeon adventure game")
+
+    // PWA manifest
+    link(rel = "manifest", href = "/manifest.json")
+
+    // PWA icons
+    link(rel = "icon", href = "/icons/icon-192x192.html")
+    link(rel = "apple-touch-icon", href = "/icons/icon-192x192.html")
+
+    // Stylesheets and scripts
     link(rel = "stylesheet", href = "/static/output.css")
     script(src = "https://unpkg.com/htmx.org@2.0.4") {}
     script(src = "https://unpkg.com/htmx-ext-sse@2.2.2") {}
+
     script {
       unsafe {
         // language=javascript
         raw(
             """
+                // Theme selection
                 if (localStorage.theme === 'light') {
                   document.documentElement.classList.remove('dark')
                 } else {
                   document.documentElement.classList.add('dark')
+                }
+
+                // Service worker registration
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    }, function(err) {
+                      console.log('ServiceWorker registration failed: ', err);
+                    });
+                  });
                 }
             """
                 .trimIndent())
