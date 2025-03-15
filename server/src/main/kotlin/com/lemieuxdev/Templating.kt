@@ -1,5 +1,7 @@
 package com.lemieuxdev
 
+import com.lemieuxdev.Adventure.AdventureState
+import com.lemieuxdev.Scene.SceneState
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
 import io.ktor.server.html.*
@@ -8,8 +10,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.sse.SSE
 import io.ktor.server.sse.sse
 import io.ktor.sse.ServerSentEvent
-import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
@@ -18,25 +18,26 @@ class Action(
     val name: String,
 
     /**
-     * Expression to be run when the action is triggered.
-     * There are pre- and post-processing steps that can also be configured to run.
+     * Expression to be run when the action is triggered. There are pre- and post-processing steps
+     * that can also be configured to run.
      */
     private val process: suspend () -> Unit = {},
 ) {
-    private val preProcess: suspend () -> Unit = {}
-    private val postProcess: suspend () -> Unit = {
-        val gameBoard = createHTML().main { gameBoard(game) }
-        sseEvents.emit(gameBoard)
-    }
+  private val preProcess: suspend () -> Unit = {}
+  private val postProcess: suspend () -> Unit = {
+    val gameBoard = createHTML().main { gameBoard(game) }
+    sseEvents.emit(gameBoard)
+  }
 
-    /**
-     * This is the way that the action should be called to ensure that the pre and post-processing steps are being called.
-     */
-    suspend fun run() {
-        preProcess()
-        process()
-        postProcess()
-    }
+  /**
+   * This is the way that the action should be called to ensure that the pre and post-processing
+   * steps are being called.
+   */
+  suspend fun run() {
+    preProcess()
+    process()
+    postProcess()
+  }
 }
 
 /**
@@ -45,10 +46,10 @@ class Action(
  */
 interface Adventure {
   var state: AdventureState
-}
 
-interface AdventureState {
-  var actions: List<Action>
+  interface AdventureState {
+    var actions: List<Action>
+  }
 }
 
 class DefaultAdventureState() : AdventureState {
@@ -58,12 +59,12 @@ class DefaultAdventureState() : AdventureState {
 /** This is an individual scene, adventures are made up of scenes that connect to each other. */
 interface Scene {
   var state: SceneState
-}
 
-interface SceneState {
-  var outputText: String
-  var actions: List<Action>
-  var showCursor: Boolean
+  interface SceneState {
+    var outputText: String
+    var actions: List<Action>
+    var showCursor: Boolean
+  }
 }
 
 class DefaultSceneState(
@@ -80,8 +81,6 @@ interface Display {
     return { h1 { +"TODO" } }
   }
 }
-
-class DefaultDisplay() : Display {}
 
 class TerminalDisplay() : Display {
   override fun render(
@@ -196,15 +195,8 @@ class TerminalDisplay() : Display {
 
 // TODO: Refactor or remove this
 class Game(
-    var foo: Int = 100,
     var player: Player?,
     var monster: Monster?,
-    var outputText: String = "",
-    var showStart: Boolean = true,
-    var showContinue: Boolean = false,
-
-    // Actions that the user can take.
-    val actions: List<Action> = emptyList(),
 )
 
 class Player(var attack: Int = 10)
@@ -258,7 +250,6 @@ val sceneState: SceneState =
             listOf(
                 Action("START") {
                   // Initialize the game
-                  game.showStart = false
                   game.player?.hitMonster(game.monster!!)
 
                   // Update scene state
@@ -268,21 +259,22 @@ val sceneState: SceneState =
                   // Show text gradually
                   val hardcodedText =
                       "You awaken on a cold, uneven stone floor, the air thick with the damp scent of moss and earth. Faint echoes drip from unseen crevices, and the dim glow of phosphorescent fungi outlines jagged walls around you. As you rise, the weight of silence presses against your ears, broken only by the crunch of gravel beneath your boots. A narrow passage leads you forward, its walls narrowing before spilling you into blinding sunlight. Shielding your eyes, you step into the open and behold a vast, windswept desert stretching endlessly before you. Dominating the horizon stands a colossal pyramid, its golden surface shimmering under the sun, ancient and foreboding. The air hums with a strange energy, and a faint, unearthly whisper brushes your mind, urging you closer."
-//                          .split(" ")
+                  //                          .split(" ")
 
-//                  repeat(hardcodedText.size) { i ->
-//                    delay(0.05.seconds)
-//                    sceneState.outputText = hardcodedText.slice(0..i).joinToString(" ")
-//                    val gameBoard = createHTML().main { gameBoard(game) }
-//                    sseEvents.emit(gameBoard)
-//                  }
-                    sceneState.outputText = hardcodedText
+                  //                  repeat(hardcodedText.size) { i ->
+                  //                    delay(0.05.seconds)
+                  //                    sceneState.outputText =
+                  // hardcodedText.slice(0..i).joinToString(" ")
+                  //                    val gameBoard = createHTML().main { gameBoard(game) }
+                  //                    sseEvents.emit(gameBoard)
+                  //                  }
+                  sceneState.outputText = hardcodedText
 
                   // After the text is fully revealed, add the Approach action
                   sceneState.actions =
                       listOf(
                           Action("Approach") {
-                              sceneState.actions=emptyList()
+                            sceneState.actions = emptyList()
                             sceneState.outputText = "\"Halt!\""
                           })
 
