@@ -268,19 +268,21 @@ val sceneState: SceneState =
                   // Show text gradually
                   val hardcodedText =
                       "You awaken on a cold, uneven stone floor, the air thick with the damp scent of moss and earth. Faint echoes drip from unseen crevices, and the dim glow of phosphorescent fungi outlines jagged walls around you. As you rise, the weight of silence presses against your ears, broken only by the crunch of gravel beneath your boots. A narrow passage leads you forward, its walls narrowing before spilling you into blinding sunlight. Shielding your eyes, you step into the open and behold a vast, windswept desert stretching endlessly before you. Dominating the horizon stands a colossal pyramid, its golden surface shimmering under the sun, ancient and foreboding. The air hums with a strange energy, and a faint, unearthly whisper brushes your mind, urging you closer."
-                          .split(" ")
+//                          .split(" ")
 
-                  repeat(hardcodedText.size) { i ->
-                    delay(0.05.seconds)
-                    sceneState.outputText = hardcodedText.slice(0..i).joinToString(" ")
-                    val gameBoard = createHTML().main { gameBoard(game) }
-                    sseEvents.emit(gameBoard)
-                  }
+//                  repeat(hardcodedText.size) { i ->
+//                    delay(0.05.seconds)
+//                    sceneState.outputText = hardcodedText.slice(0..i).joinToString(" ")
+//                    val gameBoard = createHTML().main { gameBoard(game) }
+//                    sseEvents.emit(gameBoard)
+//                  }
+                    sceneState.outputText = hardcodedText
 
                   // After the text is fully revealed, add the Approach action
                   sceneState.actions =
                       listOf(
                           Action("Approach") {
+                              sceneState.actions=emptyList()
                             sceneState.outputText = "\"Halt!\""
                           })
 
