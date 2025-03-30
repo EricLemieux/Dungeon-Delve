@@ -73,6 +73,99 @@ class DefaultSceneState(
     override var showCursor: Boolean = false
 ) : SceneState
 
+/** Combat scene state that stores characters (enemies and friendlies) */
+class CombatSceneState(
+    override var outputText: String = "",
+    override var actions: List<Action> = emptyList(),
+    override var showCursor: Boolean = false,
+    var characters: MutableList<Character> = mutableListOf(),
+    var selectedEnemyIndex: Int? = null
+) : SceneState {
+    // Get all enemy characters
+    fun getEnemies(): List<Character> = characters.filter { it.isEnemy }
+
+    // Get all friendly characters
+    fun getFriendlies(): List<Character> = characters.filter { !it.isEnemy }
+
+    // Add a character to the combat scene
+    fun addCharacter(character: Character) {
+        characters.add(character)
+    }
+
+    // Remove a character from the combat scene (e.g., when defeated)
+    fun removeCharacter(character: Character) {
+        characters.remove(character)
+    }
+
+    // Get the selected enemy
+    fun getSelectedEnemy(): Character? {
+        val enemies = getEnemies()
+        return if (selectedEnemyIndex != null && selectedEnemyIndex!! < enemies.size) {
+            enemies[selectedEnemyIndex!!]
+        } else {
+            null
+        }
+    }
+}
+
+/** Combat scene implementation */
+class CombatScene(override var state: SceneState = CombatSceneState()) : Scene {
+    // Initialize the combat scene with characters
+    fun initialize(enemies: List<Character>, friendlies: List<Character>) {
+        val combatState = state as CombatSceneState
+        combatState.characters.clear()
+        combatState.characters.addAll(enemies)
+        combatState.characters.addAll(friendlies)
+
+        // Set initial output text
+        combatState.outputText = "Combat has begun! Select an enemy to attack."
+
+        // Set up initial actions
+        updateActions()
+    }
+
+    // Update available actions based on the current state
+    fun updateActions() {
+        val combatState = state as CombatSceneState
+        val actions = mutableListOf<Action>()
+
+        // Add attack action if an enemy is selected
+        val selectedEnemy = combatState.getSelectedEnemy()
+        if (selectedEnemy != null) {
+            actions.add(Action("Attack ${selectedEnemy.name}") {
+                // Perform attack logic
+                val attacker = combatState.getFriendlies().firstOrNull()
+                if (attacker != null) {
+                    selectedEnemy.health -= attacker.attack
+                    combatState.outputText = "${attacker.name} attacks ${selectedEnemy.name} for ${attacker.attack} damage!"
+
+                    // Check if enemy is defeated
+                    if (selectedEnemy.health <= 0) {
+                        combatState.outputText += "\n${selectedEnemy.name} has been defeated!"
+                        combatState.removeCharacter(selectedEnemy)
+                    }
+
+                    // Reset selected enemy
+                    combatState.selectedEnemyIndex = null
+                    updateActions()
+                }
+            })
+        }
+
+        // Add enemy selection actions
+        val enemies = combatState.getEnemies()
+        enemies.forEachIndexed { index, enemy ->
+            actions.add(Action("Select ${enemy.name}") {
+                combatState.selectedEnemyIndex = index
+                combatState.outputText = "${enemy.name} selected as target."
+                updateActions()
+            })
+        }
+
+        combatState.actions = actions
+    }
+}
+
 /** Display controls, this dictates the presentation of the game state to the users. */
 interface Display {
   /** Render as html */
@@ -193,6 +286,14 @@ class TerminalDisplay() : Display {
   }
 }
 
+// Character data class that can represent both enemies and friendlies
+data class Character(
+    val name: String,
+    val isEnemy: Boolean,
+    var health: Int,
+    var attack: Int
+)
+
 // TODO: Refactor or remove this
 class Game(
     var player: Player?,
@@ -302,17 +403,44 @@ val sceneState: SceneState =
                           Action("Approach") {
                             sceneState.actions = emptyList()
                             sceneState.outputText = "\"Halt!\""
+
+                            // Add action to enter combat
+                            sceneState.actions = listOf(
+                                Action("Enter Combat") {
+                                    // Switch to combat scene
+                                    currentScene = combatScene
+                                    currentDisplay = combatDisplay
+
+                                    // Initialize combat with enemies and friendlies
+                                    val enemies = listOf(
+                                        Character("Goblin", true, 30, 5),
+                                        Character("Orc", true, 50, 8)
+                                    )
+                                    val friendlies = listOf(
+                                        Character("Hero", false, 100, 10),
+                                        Character("Companion", false, 75, 7)
+                                    )
+                                    combatScene.initialize(enemies, friendlies)
+                                }
+                            )
                           })
 
                   // Keep the cursor visible
                   sceneState.showCursor = true
                 }))
-val display: Display = TerminalDisplay()
+
+// Create combat scene and display
+val combatScene = CombatScene()
+val combatDisplay = CombatDisplay()
+
+// Track current scene and display
+var currentScene: Scene = object : Scene { override var state: SceneState = sceneState }
+var currentDisplay: Display = TerminalDisplay()
 
 fun MAIN.gameBoard(gameState: Game) {
   id = "game-board"
 
-  apply(display.render(adventureState, sceneState))
+  apply(currentDisplay.render(adventureState, currentScene.state))
 }
 
 fun Application.configureTemplating() {
@@ -328,8 +456,8 @@ fun Application.configureTemplating() {
       val actionId = call.parameters["actionId"]
       println("Action ID: $actionId")
 
-      // Find the matching action in the scene state
-      val action = sceneState.actions.find { it.name == actionId }
+      // Find the matching action in the current scene state
+      val action = currentScene.state.actions.find { it.name == actionId }
 
       if (action != null) {
         // Execute the action
