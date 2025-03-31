@@ -2,6 +2,7 @@ package com.lemieuxdev
 
 import com.lemieuxdev.Adventure.AdventureState
 import com.lemieuxdev.Scene.SceneState
+import com.lemieuxdev.elevenlabs.ElevenLabsAPI
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -708,61 +709,7 @@ fun MAIN.gameBoard(gameState: Game) {
   logger.debug("Game board rendered")
 }
 
-// Data models for Eleven Labs API
-@Serializable
-data class ElevenLabsTextToSpeechRequest(
-    val text: String,
-    val model_id: String = "eleven_monolingual_v1",
-    val voice_settings: VoiceSettings = VoiceSettings()
-)
-
-@Serializable
-data class VoiceSettings(
-    val stability: Float = 0.5f,
-    val similarity_boost: Float = 0.5f
-)
-
-// HTTP client for Eleven Labs API
-val httpClient = HttpClient(CIO) {
-    install(ContentNegotiation) {
-        json(Json {
-            prettyPrint = true
-            isLenient = true
-            ignoreUnknownKeys = true
-        })
-    }
-    install(Logging) {
-        level = LogLevel.INFO
-    }
-}
-
-// Function to call Eleven Labs API
-suspend fun generateSpeech(text: String, voiceId: String = "21m00Tcm4TlvDq8ikWAM"): ByteArray {
-    val logger: Logger = LoggerFactory.getLogger("com.lemieuxdev.generateSpeech")
-    logger.debug("Generating speech for text: $text")
-
-    // Get API key from environment variable
-    val apiKey = System.getenv("ELEVEN_LABS_API_KEY") ?: throw IllegalStateException("ELEVEN_LABS_API_KEY environment variable is not set")
-
-    val request = ElevenLabsTextToSpeechRequest(text = text)
-
-    logger.debug("Sending request to Eleven Labs API")
-    val response = httpClient.post("https://api.elevenlabs.io/v1/text-to-speech/$voiceId") {
-        contentType(ContentType.Application.Json)
-        header("xi-api-key", apiKey)
-        setBody(request)
-    }
-
-    logger.debug("Received response from Eleven Labs API with status: ${response.status}")
-
-    if (response.status.isSuccess()) {
-        logger.debug("Successfully generated speech")
-        return response.body()
-    } else {
-        logger.error("Failed to generate speech: ${response.bodyAsText()}")
-        throw Exception("Failed to generate speech: ${response.status}")
-    }
-}
+// Eleven Labs API is now in a separate module
 
 // HTML template for the text-to-speech form
 fun HTML.textToSpeechForm() {
@@ -870,9 +817,10 @@ fun Application.configureTemplating() {
       }
 
       try {
-        // Generate the speech audio
+        // Generate the speech audio using the Eleven Labs API
         logger.debug("Generating speech for text")
-        val audioData = generateSpeech(text)
+        val elevenLabsAPI = ElevenLabsAPI.fromEnvironment()
+        val audioData = elevenLabsAPI.textToSpeech(text)
         logger.debug("Speech generated successfully, size: ${audioData.size} bytes")
 
         // Create a unique filename for the audio
