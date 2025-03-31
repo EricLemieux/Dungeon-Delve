@@ -218,6 +218,13 @@ class CombatScene(override var state: SceneState = CombatSceneState()) : Scene, 
         // Set up initial actions
         logger.debug("Setting up initial actions")
         updateActions()
+
+        // Emit the game board state after initialization
+        logger.debug("Emitting game board state after initialization")
+        launch {
+            val gameBoard = createHTML().main { gameBoard(game) }
+            sseEvents.emit(gameBoard)
+        }
     }
 
     // Update available actions based on the current state
@@ -271,6 +278,11 @@ class CombatScene(override var state: SceneState = CombatSceneState()) : Scene, 
                     combatState.selectedEnemyIndex = index
                     combatState.outputText = "${enemy.name} selected as target."
                     updateActions()
+
+                    // Emit the game board state after selecting an enemy
+                    logger.debug("Emitting game board state after selecting enemy")
+                    val gameBoard = createHTML().main { gameBoard(game) }
+                    sseEvents.emit(gameBoard)
                 })
             }
         } else if (currentCharacter != null && currentCharacter.isEnemy) {
@@ -322,6 +334,11 @@ class CombatScene(override var state: SceneState = CombatSceneState()) : Scene, 
             combatState.showCursor = true
             combatState.outputText = "${enemy.name} is thinking..."
             logger.debug("Set thinking indicator and output text")
+
+            // Emit the game board state to show the thinking indicator
+            logger.debug("Emitting game board state to show thinking indicator")
+            val gameBoard = createHTML().main { gameBoard(game) }
+            sseEvents.emit(gameBoard)
 
             // TODO: this appears to not be working
             logger.debug("Adding delay to simulate thinking")
