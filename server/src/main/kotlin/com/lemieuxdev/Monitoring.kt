@@ -24,7 +24,7 @@ fun Application.configureMonitoring() {
     level = Level.INFO
     logger.debug("Setting call logging level to INFO")
 
-    filter { call -> 
+    filter { call ->
       val path = call.request.path()
       val shouldLog = path.startsWith("/")
       logger.debug("Call logging filter for path: $path, will log: $shouldLog")

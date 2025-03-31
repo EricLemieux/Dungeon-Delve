@@ -2,9 +2,7 @@ package com.lemieuxdev.llm.models
 
 import kotlinx.serialization.Serializable
 
-/**
- * Configuration for LLM requests
- */
+/** Configuration for LLM requests */
 @Serializable
 data class LLMConfig(
     val temperature: Float = 0.7f,
@@ -12,18 +10,10 @@ data class LLMConfig(
     val model: String = "gpt-3.5-turbo"
 )
 
-/**
- * Request model for LLM API
- */
-@Serializable
-data class LLMRequest(
-    val prompt: String,
-    val config: LLMConfig = LLMConfig()
-)
+/** Request model for LLM API */
+@Serializable data class LLMRequest(val prompt: String, val config: LLMConfig = LLMConfig())
 
-/**
- * Response model for LLM API
- */
+/** Response model for LLM API */
 @Serializable
 data class LLMResponse(
     val text: String,

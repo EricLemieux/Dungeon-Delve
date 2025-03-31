@@ -76,11 +76,14 @@ class CombatDisplay() : Display {
 
                     for ((index, character) in sceneState.turnOrder.withIndex()) {
                       val isCurrentTurn = index == sceneState.currentTurnIndex
-                      val borderColor = if (character.isEnemy) "border-red-800" else "border-green-800"
-                      val highlightClass = if (isCurrentTurn) "bg-yellow-900 ring-2 ring-yellow-500" else ""
+                      val borderColor =
+                          if (character.isEnemy) "border-red-800" else "border-green-800"
+                      val highlightClass =
+                          if (isCurrentTurn) "bg-yellow-900 ring-2 ring-yellow-500" else ""
 
                       div {
-                        classes = "border $borderColor p-2 rounded $highlightClass".split(" ").toSet()
+                        classes =
+                            "border $borderColor p-2 rounded $highlightClass".split(" ").toSet()
 
                         // Character name and health
                         div {
@@ -107,7 +110,8 @@ class CombatDisplay() : Display {
                         div {
                           classes = "w-full bg-gray-700 rounded-full h-2.5 mt-1".split(" ").toSet()
                           div {
-                            val healthPercent = (character.health.coerceAtLeast(0) * 100 / 100).coerceAtMost(100)
+                            val healthPercent =
+                                (character.health.coerceAtLeast(0) * 100 / 100).coerceAtMost(100)
                             style = "width: ${healthPercent}%"
                             val barColor = if (character.isEnemy) "bg-red-600" else "bg-green-600"
                             classes = "$barColor h-2.5 rounded-full".split(" ").toSet()
@@ -124,7 +128,8 @@ class CombatDisplay() : Display {
                         div {
                           classes = "mt-1 text-xs".split(" ").toSet()
                           val typeText = if (character.isEnemy) "Enemy" else "Friendly"
-                          val typeColor = if (character.isEnemy) "text-red-500" else "text-green-500"
+                          val typeColor =
+                              if (character.isEnemy) "text-red-500" else "text-green-500"
                           span {
                             classes = typeColor.split(" ").toSet()
                             +typeText

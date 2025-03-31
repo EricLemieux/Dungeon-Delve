@@ -23,17 +23,15 @@ import io.ktor.server.routing.*
 import io.ktor.server.sse.SSE
 import io.ktor.server.sse.sse
 import io.ktor.sse.ServerSentEvent
+import java.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.*
 
 class Action(
     val name: String,
@@ -47,6 +45,7 @@ class Action(
   companion object {
     private val logger: Logger = LoggerFactory.getLogger(Action::class.java)
   }
+
   private val preProcess: suspend () -> Unit = {
     logger.debug("Executing pre-process for action: $name")
   }
@@ -92,14 +91,14 @@ class DefaultAdventureState() : AdventureState {
     private val logger: Logger = LoggerFactory.getLogger(DefaultAdventureState::class.java)
   }
 
-  override var actions: List<Action> = listOf(Action("test") { 
-    logger.debug("Executing test action")
-    println("Testing") 
-  })
-  override var friendlyCharacters: MutableList<Character> = mutableListOf(
-    Character("Hero", false, 100, 10),
-    Character("Companion", false, 75, 7)
-  )
+  override var actions: List<Action> =
+      listOf(
+          Action("test") {
+            logger.debug("Executing test action")
+            println("Testing")
+          })
+  override var friendlyCharacters: MutableList<Character> =
+      mutableListOf(Character("Hero", false, 100, 10), Character("Companion", false, 75, 7))
 }
 
 /** This is an individual scene, adventures are made up of scenes that connect to each other. */
@@ -129,266 +128,273 @@ class CombatSceneState(
     var turnOrder: MutableList<Character> = mutableListOf(),
     var currentTurnIndex: Int = 0
 ) : SceneState {
-    companion object {
-        private val logger: Logger = LoggerFactory.getLogger(CombatSceneState::class.java)
-    }
-    // Get all enemy characters
-    fun getEnemies(): List<Character> {
-        logger.debug("Getting all enemy characters")
-        return characters.filter { it.isEnemy }
-    }
+  companion object {
+    private val logger: Logger = LoggerFactory.getLogger(CombatSceneState::class.java)
+  }
+  // Get all enemy characters
+  fun getEnemies(): List<Character> {
+    logger.debug("Getting all enemy characters")
+    return characters.filter { it.isEnemy }
+  }
 
-    // Get all friendly characters
-    fun getFriendlies(): List<Character> {
-        logger.debug("Getting all friendly characters")
-        return characters.filter { !it.isEnemy }
-    }
+  // Get all friendly characters
+  fun getFriendlies(): List<Character> {
+    logger.debug("Getting all friendly characters")
+    return characters.filter { !it.isEnemy }
+  }
 
-    // Add a character to the combat scene
-    fun addCharacter(character: Character) {
-        logger.debug("Adding character: ${character.name}")
-        characters.add(character)
-    }
+  // Add a character to the combat scene
+  fun addCharacter(character: Character) {
+    logger.debug("Adding character: ${character.name}")
+    characters.add(character)
+  }
 
-    // Remove a character from the combat scene (e.g., when defeated)
-    fun removeCharacter(character: Character) {
-        logger.debug("Removing character: ${character.name}")
-        characters.remove(character)
-        turnOrder.remove(character)
+  // Remove a character from the combat scene (e.g., when defeated)
+  fun removeCharacter(character: Character) {
+    logger.debug("Removing character: ${character.name}")
+    characters.remove(character)
+    turnOrder.remove(character)
 
-        // Adjust currentTurnIndex if needed
-        if (turnOrder.isNotEmpty() && currentTurnIndex >= turnOrder.size) {
-            logger.debug("Adjusting currentTurnIndex from $currentTurnIndex to 0 because it's >= turnOrder.size (${turnOrder.size})")
-            currentTurnIndex = 0
-        } else {
-            logger.debug("No need to adjust currentTurnIndex: $currentTurnIndex, turnOrder.size: ${turnOrder.size}")
-        }
+    // Adjust currentTurnIndex if needed
+    if (turnOrder.isNotEmpty() && currentTurnIndex >= turnOrder.size) {
+      logger.debug(
+          "Adjusting currentTurnIndex from $currentTurnIndex to 0 because it's >= turnOrder.size (${turnOrder.size})")
+      currentTurnIndex = 0
+    } else {
+      logger.debug(
+          "No need to adjust currentTurnIndex: $currentTurnIndex, turnOrder.size: ${turnOrder.size}")
     }
+  }
 
-    // Get the selected enemy
-    fun getSelectedEnemy(): Character? {
-        logger.debug("Getting selected enemy with index: $selectedEnemyIndex")
-        val enemies = getEnemies()
-        if (selectedEnemyIndex != null && selectedEnemyIndex!! < enemies.size) {
-            logger.debug("Selected enemy found: ${enemies[selectedEnemyIndex!!].name}")
-            return enemies[selectedEnemyIndex!!]
-        } else {
-            logger.debug("No selected enemy found")
-            return null
-        }
+  // Get the selected enemy
+  fun getSelectedEnemy(): Character? {
+    logger.debug("Getting selected enemy with index: $selectedEnemyIndex")
+    val enemies = getEnemies()
+    if (selectedEnemyIndex != null && selectedEnemyIndex!! < enemies.size) {
+      logger.debug("Selected enemy found: ${enemies[selectedEnemyIndex!!].name}")
+      return enemies[selectedEnemyIndex!!]
+    } else {
+      logger.debug("No selected enemy found")
+      return null
     }
+  }
 
-    // Get the character whose turn it currently is
-    fun getCurrentTurnCharacter(): Character? {
-        logger.debug("Getting current turn character with index: $currentTurnIndex")
-        if (turnOrder.isNotEmpty() && currentTurnIndex < turnOrder.size) {
-            logger.debug("Current turn character: ${turnOrder[currentTurnIndex].name}")
-            return turnOrder[currentTurnIndex]
-        } else {
-            logger.debug("No current turn character found")
-            return null
-        }
+  // Get the character whose turn it currently is
+  fun getCurrentTurnCharacter(): Character? {
+    logger.debug("Getting current turn character with index: $currentTurnIndex")
+    if (turnOrder.isNotEmpty() && currentTurnIndex < turnOrder.size) {
+      logger.debug("Current turn character: ${turnOrder[currentTurnIndex].name}")
+      return turnOrder[currentTurnIndex]
+    } else {
+      logger.debug("No current turn character found")
+      return null
     }
+  }
 
-    // Advance to the next character's turn
-    fun advanceToNextTurn() {
-        logger.debug("Advancing to next turn from index: $currentTurnIndex")
-        if (turnOrder.isNotEmpty()) {
-            currentTurnIndex = (currentTurnIndex + 1) % turnOrder.size
-            logger.debug("Advanced to next turn, new index: $currentTurnIndex")
-        } else {
-            logger.debug("Cannot advance turn, turnOrder is empty")
-        }
+  // Advance to the next character's turn
+  fun advanceToNextTurn() {
+    logger.debug("Advancing to next turn from index: $currentTurnIndex")
+    if (turnOrder.isNotEmpty()) {
+      currentTurnIndex = (currentTurnIndex + 1) % turnOrder.size
+      logger.debug("Advanced to next turn, new index: $currentTurnIndex")
+    } else {
+      logger.debug("Cannot advance turn, turnOrder is empty")
     }
+  }
 }
 
 /** Combat scene implementation */
-class CombatScene(override var state: SceneState = CombatSceneState()) : Scene, CoroutineScope by CoroutineScope(kotlinx.coroutines.Dispatchers.Default) {
-    companion object {
-        private val logger: Logger = LoggerFactory.getLogger(CombatScene::class.java)
+class CombatScene(override var state: SceneState = CombatSceneState()) :
+    Scene, CoroutineScope by CoroutineScope(kotlinx.coroutines.Dispatchers.Default) {
+  companion object {
+    private val logger: Logger = LoggerFactory.getLogger(CombatScene::class.java)
+  }
+  // Initialize the combat scene with characters
+  fun initialize(enemies: List<Character>, friendlies: List<Character>) {
+    logger.debug(
+        "Initializing combat scene with ${enemies.size} enemies and ${friendlies.size} friendlies")
+    val combatState = state as CombatSceneState
+    combatState.characters.clear()
+    logger.debug("Adding enemies to combat scene")
+    combatState.characters.addAll(enemies)
+    logger.debug("Adding friendlies to combat scene")
+    combatState.characters.addAll(friendlies)
+
+    // Initialize turn order by shuffling all characters
+    logger.debug("Initializing turn order")
+    combatState.turnOrder.clear()
+    combatState.turnOrder.addAll(combatState.characters.shuffled())
+    combatState.currentTurnIndex = 0
+    logger.debug("Turn order initialized with ${combatState.turnOrder.size} characters")
+
+    val currentCharacter = combatState.getCurrentTurnCharacter()
+    logger.debug("Current character: ${currentCharacter?.name ?: "Unknown"}")
+
+    // Set initial output text
+    combatState.outputText = "Combat has begun! ${currentCharacter?.name ?: "Unknown"}'s turn."
+    logger.debug("Initial output text set")
+
+    // Set up initial actions
+    logger.debug("Setting up initial actions")
+    updateActions()
+
+    // Emit the game board state after initialization
+    logger.debug("Emitting game board state after initialization")
+    launch {
+      val gameBoard = createHTML().main { gameBoard(game) }
+      sseEvents.emit(gameBoard)
     }
-    // Initialize the combat scene with characters
-    fun initialize(enemies: List<Character>, friendlies: List<Character>) {
-        logger.debug("Initializing combat scene with ${enemies.size} enemies and ${friendlies.size} friendlies")
-        val combatState = state as CombatSceneState
-        combatState.characters.clear()
-        logger.debug("Adding enemies to combat scene")
-        combatState.characters.addAll(enemies)
-        logger.debug("Adding friendlies to combat scene")
-        combatState.characters.addAll(friendlies)
+  }
 
-        // Initialize turn order by shuffling all characters
-        logger.debug("Initializing turn order")
-        combatState.turnOrder.clear()
-        combatState.turnOrder.addAll(combatState.characters.shuffled())
-        combatState.currentTurnIndex = 0
-        logger.debug("Turn order initialized with ${combatState.turnOrder.size} characters")
+  // Update available actions based on the current state
+  fun updateActions() {
+    logger.debug("Updating actions")
+    val combatState = state as CombatSceneState
+    val actions = mutableListOf<Action>()
 
-        val currentCharacter = combatState.getCurrentTurnCharacter()
-        logger.debug("Current character: ${currentCharacter?.name ?: "Unknown"}")
+    val currentCharacter = combatState.getCurrentTurnCharacter()
+    logger.debug("Current character: ${currentCharacter?.name ?: "null"}")
 
-        // Set initial output text
-        combatState.outputText = "Combat has begun! ${currentCharacter?.name ?: "Unknown"}'s turn."
-        logger.debug("Initial output text set")
+    // Only allow actions if it's a friendly character's turn
+    if (currentCharacter != null && !currentCharacter.isEnemy) {
+      logger.debug("Current character is friendly, adding player actions")
 
-        // Set up initial actions
-        logger.debug("Setting up initial actions")
-        updateActions()
+      // Add attack action if an enemy is selected
+      val selectedEnemy = combatState.getSelectedEnemy()
+      if (selectedEnemy != null) {
+        logger.debug("Enemy selected: ${selectedEnemy.name}, adding attack action")
+        actions.add(
+            Action("Attack ${selectedEnemy.name}") {
+              logger.debug("Executing attack on ${selectedEnemy.name}")
+              // Perform attack logic
+              selectedEnemy.health -= currentCharacter.attack
+              logger.debug(
+                  "${currentCharacter.name} attacks ${selectedEnemy.name} for ${currentCharacter.attack} damage, enemy health now: ${selectedEnemy.health}")
+              combatState.outputText =
+                  "${currentCharacter.name} attacks ${selectedEnemy.name} for ${currentCharacter.attack} damage!"
 
-        // Emit the game board state after initialization
-        logger.debug("Emitting game board state after initialization")
-        launch {
-            val gameBoard = createHTML().main { gameBoard(game) }
-            sseEvents.emit(gameBoard)
-        }
-    }
+              // Check if enemy is defeated
+              if (selectedEnemy.health <= 0) {
+                logger.debug("${selectedEnemy.name} has been defeated")
+                combatState.outputText += "\n${selectedEnemy.name} has been defeated!"
+                combatState.removeCharacter(selectedEnemy)
+              } else {
+                logger.debug("${selectedEnemy.name} survived with ${selectedEnemy.health} health")
+              }
 
-    // Update available actions based on the current state
-    fun updateActions() {
-        logger.debug("Updating actions")
-        val combatState = state as CombatSceneState
-        val actions = mutableListOf<Action>()
+              // Reset selected enemy and advance to next turn
+              logger.debug("Resetting selected enemy and ending turn")
+              combatState.selectedEnemyIndex = null
+              endTurn()
+            })
+      } else {
+        logger.debug("No enemy selected, adding enemy selection actions")
+      }
 
-        val currentCharacter = combatState.getCurrentTurnCharacter()
-        logger.debug("Current character: ${currentCharacter?.name ?: "null"}")
+      // Add enemy selection actions
+      val enemies = combatState.getEnemies()
+      logger.debug("Adding selection actions for ${enemies.size} enemies")
+      enemies.forEachIndexed { index, enemy ->
+        actions.add(
+            Action("Select ${enemy.name}") {
+              logger.debug("Selected enemy: ${enemy.name} at index $index")
+              combatState.selectedEnemyIndex = index
+              combatState.outputText = "${enemy.name} selected as target."
+              updateActions()
 
-        // Only allow actions if it's a friendly character's turn
-        if (currentCharacter != null && !currentCharacter.isEnemy) {
-            logger.debug("Current character is friendly, adding player actions")
-
-            // Add attack action if an enemy is selected
-            val selectedEnemy = combatState.getSelectedEnemy()
-            if (selectedEnemy != null) {
-                logger.debug("Enemy selected: ${selectedEnemy.name}, adding attack action")
-                actions.add(Action("Attack ${selectedEnemy.name}") {
-                    logger.debug("Executing attack on ${selectedEnemy.name}")
-                    // Perform attack logic
-                    selectedEnemy.health -= currentCharacter.attack
-                    logger.debug("${currentCharacter.name} attacks ${selectedEnemy.name} for ${currentCharacter.attack} damage, enemy health now: ${selectedEnemy.health}")
-                    combatState.outputText = "${currentCharacter.name} attacks ${selectedEnemy.name} for ${currentCharacter.attack} damage!"
-
-                    // Check if enemy is defeated
-                    if (selectedEnemy.health <= 0) {
-                        logger.debug("${selectedEnemy.name} has been defeated")
-                        combatState.outputText += "\n${selectedEnemy.name} has been defeated!"
-                        combatState.removeCharacter(selectedEnemy)
-                    } else {
-                        logger.debug("${selectedEnemy.name} survived with ${selectedEnemy.health} health")
-                    }
-
-                    // Reset selected enemy and advance to next turn
-                    logger.debug("Resetting selected enemy and ending turn")
-                    combatState.selectedEnemyIndex = null
-                    endTurn()
-                })
-            } else {
-                logger.debug("No enemy selected, adding enemy selection actions")
-            }
-
-            // Add enemy selection actions
-            val enemies = combatState.getEnemies()
-            logger.debug("Adding selection actions for ${enemies.size} enemies")
-            enemies.forEachIndexed { index, enemy ->
-                actions.add(Action("Select ${enemy.name}") {
-                    logger.debug("Selected enemy: ${enemy.name} at index $index")
-                    combatState.selectedEnemyIndex = index
-                    combatState.outputText = "${enemy.name} selected as target."
-                    updateActions()
-
-                    // Emit the game board state after selecting an enemy
-                    logger.debug("Emitting game board state after selecting enemy")
-                    val gameBoard = createHTML().main { gameBoard(game) }
-                    sseEvents.emit(gameBoard)
-                })
-            }
-        } else if (currentCharacter != null && currentCharacter.isEnemy) {
-            logger.debug("Current character is enemy: ${currentCharacter.name}, processing enemy turn")
-            // If it's an enemy's turn, show thinking indicator and add delay
-            launch {
-                processEnemyTurn(currentCharacter)
-            }
-        } else {
-            logger.debug("No current character, no actions added")
-        }
-
-        logger.debug("Setting ${actions.size} actions to combat state")
-        combatState.actions = actions
-    }
-
-    // End the current turn and advance to the next character
-    suspend fun endTurn() {
-        logger.debug("Ending current turn")
-        val combatState = state as CombatSceneState
-        combatState.advanceToNextTurn()
-
-        val nextCharacter = combatState.getCurrentTurnCharacter()
-        if (nextCharacter != null) {
-            logger.debug("Next character's turn: ${nextCharacter.name}")
-            combatState.outputText += "\nIt's now ${nextCharacter.name}'s turn."
-        } else {
-            logger.debug("No next character found")
-        }
-
-        logger.debug("Updating actions for next turn")
-        updateActions()
-
-        val gameBoard = createHTML().main { gameBoard(game) }
-        logger.debug("Created game board HTML")
-        sseEvents.emit(gameBoard)
+              // Emit the game board state after selecting an enemy
+              logger.debug("Emitting game board state after selecting enemy")
+              val gameBoard = createHTML().main { gameBoard(game) }
+              sseEvents.emit(gameBoard)
+            })
+      }
+    } else if (currentCharacter != null && currentCharacter.isEnemy) {
+      logger.debug("Current character is enemy: ${currentCharacter.name}, processing enemy turn")
+      // If it's an enemy's turn, show thinking indicator and add delay
+      launch { processEnemyTurn(currentCharacter) }
+    } else {
+      logger.debug("No current character, no actions added")
     }
 
-    // Process enemy turn with delay and thinking indicator
-    private suspend fun processEnemyTurn(enemy: Character) {
-        logger.debug("Processing enemy turn for ${enemy.name}")
-        val combatState = state as CombatSceneState
-        val friendlies = combatState.getFriendlies()
-        logger.debug("Found ${friendlies.size} friendly characters")
+    logger.debug("Setting ${actions.size} actions to combat state")
+    combatState.actions = actions
+  }
 
-        if (friendlies.isNotEmpty()) {
-            logger.debug("Friendlies present, enemy will attack")
-            // Show thinking indicator
-            combatState.showCursor = true
-            combatState.outputText = "${enemy.name} is thinking..."
-            logger.debug("Set thinking indicator and output text")
+  // End the current turn and advance to the next character
+  suspend fun endTurn() {
+    logger.debug("Ending current turn")
+    val combatState = state as CombatSceneState
+    combatState.advanceToNextTurn()
 
-            // Emit the game board state to show the thinking indicator
-            logger.debug("Emitting game board state to show thinking indicator")
-            val gameBoard = createHTML().main { gameBoard(game) }
-            sseEvents.emit(gameBoard)
-
-            // TODO: this appears to not be working
-            logger.debug("Adding delay to simulate thinking")
-
-            // Add delay to simulate thinking
-            delay(2000) // 2 seconds delay
-            logger.debug("Delay completed")
-
-            // Select target and attack
-            val target = friendlies.random()
-            logger.debug("Selected random target: ${target.name}")
-            combatState.showCursor = false
-            target.health -= enemy.attack
-            logger.debug("${enemy.name} attacks ${target.name} for ${enemy.attack} damage, target health now: ${target.health}")
-            combatState.outputText = "${enemy.name} attacks ${target.name} for ${enemy.attack} damage!"
-
-            // Check if friendly is defeated
-            if (target.health <= 0) {
-                logger.debug("${target.name} has been defeated")
-                combatState.outputText += "\n${target.name} has been defeated!"
-                combatState.removeCharacter(target)
-            } else {
-                logger.debug("${target.name} survived with ${target.health} health")
-            }
-
-            // End the enemy's turn
-            logger.debug("Ending enemy's turn")
-            endTurn()
-        } else {
-            // If no friendlies left, just end the turn
-            logger.debug("No friendlies left, ending turn without action")
-            endTurn()
-        }
+    val nextCharacter = combatState.getCurrentTurnCharacter()
+    if (nextCharacter != null) {
+      logger.debug("Next character's turn: ${nextCharacter.name}")
+      combatState.outputText += "\nIt's now ${nextCharacter.name}'s turn."
+    } else {
+      logger.debug("No next character found")
     }
+
+    logger.debug("Updating actions for next turn")
+    updateActions()
+
+    val gameBoard = createHTML().main { gameBoard(game) }
+    logger.debug("Created game board HTML")
+    sseEvents.emit(gameBoard)
+  }
+
+  // Process enemy turn with delay and thinking indicator
+  private suspend fun processEnemyTurn(enemy: Character) {
+    logger.debug("Processing enemy turn for ${enemy.name}")
+    val combatState = state as CombatSceneState
+    val friendlies = combatState.getFriendlies()
+    logger.debug("Found ${friendlies.size} friendly characters")
+
+    if (friendlies.isNotEmpty()) {
+      logger.debug("Friendlies present, enemy will attack")
+      // Show thinking indicator
+      combatState.showCursor = true
+      combatState.outputText = "${enemy.name} is thinking..."
+      logger.debug("Set thinking indicator and output text")
+
+      // Emit the game board state to show the thinking indicator
+      logger.debug("Emitting game board state to show thinking indicator")
+      val gameBoard = createHTML().main { gameBoard(game) }
+      sseEvents.emit(gameBoard)
+
+      // TODO: this appears to not be working
+      logger.debug("Adding delay to simulate thinking")
+
+      // Add delay to simulate thinking
+      delay(2000) // 2 seconds delay
+      logger.debug("Delay completed")
+
+      // Select target and attack
+      val target = friendlies.random()
+      logger.debug("Selected random target: ${target.name}")
+      combatState.showCursor = false
+      target.health -= enemy.attack
+      logger.debug(
+          "${enemy.name} attacks ${target.name} for ${enemy.attack} damage, target health now: ${target.health}")
+      combatState.outputText = "${enemy.name} attacks ${target.name} for ${enemy.attack} damage!"
+
+      // Check if friendly is defeated
+      if (target.health <= 0) {
+        logger.debug("${target.name} has been defeated")
+        combatState.outputText += "\n${target.name} has been defeated!"
+        combatState.removeCharacter(target)
+      } else {
+        logger.debug("${target.name} survived with ${target.health} health")
+      }
+
+      // End the enemy's turn
+      logger.debug("Ending enemy's turn")
+      endTurn()
+    } else {
+      // If no friendlies left, just end the turn
+      logger.debug("No friendlies left, ending turn without action")
+      endTurn()
+    }
+  }
 }
 
 /** Display controls, this dictates the presentation of the game state to the users. */
@@ -522,15 +528,10 @@ class TerminalDisplay() : Display {
 }
 
 // Character data class that can represent both enemies and friendlies
-data class Character(
-    val name: String,
-    val isEnemy: Boolean,
-    var health: Int,
-    var attack: Int
-) {
-    companion object {
-        private val logger: Logger = LoggerFactory.getLogger(Character::class.java)
-    }
+data class Character(val name: String, val isEnemy: Boolean, var health: Int, var attack: Int) {
+  companion object {
+    private val logger: Logger = LoggerFactory.getLogger(Character::class.java)
+  }
 }
 
 // TODO: Refactor or remove this
@@ -538,9 +539,9 @@ class Game(
     var player: Player?,
     var monster: Monster?,
 ) {
-    companion object {
-        private val logger: Logger = LoggerFactory.getLogger(Game::class.java)
-    }
+  companion object {
+    private val logger: Logger = LoggerFactory.getLogger(Game::class.java)
+  }
 }
 
 class Player(var attack: Int = 10) {
@@ -671,21 +672,23 @@ val sceneState: SceneState =
                             sceneState.outputText = "\"Halt!\""
 
                             // Add action to enter combat
-                            sceneState.actions = listOf(
-                                Action("Enter Combat") {
-                                    // Switch to combat scene
-                                    currentScene = combatScene
-                                    currentDisplay = combatDisplay
+                            sceneState.actions =
+                                listOf(
+                                    Action("Enter Combat") {
+                                      // Switch to combat scene
+                                      currentScene = combatScene
+                                      currentDisplay = combatDisplay
 
-                                    // Initialize combat with enemies and friendlies from adventure state
-                                    val enemies = listOf(
-                                        Character("Goblin", true, 30, 5),
-                                        Character("Orc", true, 50, 8)
-                                    )
-                                    // Use friendly characters from adventure state
-                                    combatScene.initialize(enemies, adventureState.friendlyCharacters)
-                                }
-                            )
+                                      // Initialize combat with enemies and friendlies from
+                                      // adventure state
+                                      val enemies =
+                                          listOf(
+                                              Character("Goblin", true, 30, 5),
+                                              Character("Orc", true, 50, 8))
+                                      // Use friendly characters from adventure state
+                                      combatScene.initialize(
+                                          enemies, adventureState.friendlyCharacters)
+                                    })
                           })
 
                   // Keep the cursor visible
@@ -697,7 +700,10 @@ val combatScene = CombatScene()
 val combatDisplay = CombatDisplay()
 
 // Track current scene and display
-var currentScene: Scene = object : Scene { override var state: SceneState = sceneState }
+var currentScene: Scene =
+    object : Scene {
+      override var state: SceneState = sceneState
+    }
 var currentDisplay: Display = TerminalDisplay()
 
 fun MAIN.gameBoard(gameState: Game) {
@@ -725,7 +731,10 @@ fun HTML.llmForm() {
       classes = "flex min-h-screen items-center justify-center bg-gray-900 p-4".split(" ").toSet()
 
       div {
-        classes = "w-full max-w-md rounded-lg border-2 border-blue-500 bg-black p-6 shadow-lg".split(" ").toSet()
+        classes =
+            "w-full max-w-md rounded-lg border-2 border-blue-500 bg-black p-6 shadow-lg"
+                .split(" ")
+                .toSet()
 
         h1 {
           classes = "mb-6 text-2xl font-bold text-blue-500".split(" ").toSet()
@@ -745,7 +754,10 @@ fun HTML.llmForm() {
               +"Enter your prompt"
             }
             textArea {
-              classes = "w-full rounded border border-blue-500 bg-black p-2 text-blue-500 focus:border-blue-700 focus:outline-none".split(" ").toSet()
+              classes =
+                  "w-full rounded border border-blue-500 bg-black p-2 text-blue-500 focus:border-blue-700 focus:outline-none"
+                      .split(" ")
+                      .toSet()
               id = "prompt-input"
               attributes["name"] = "prompt"
               attributes["rows"] = "5"
@@ -755,7 +767,10 @@ fun HTML.llmForm() {
           }
 
           button {
-            classes = "w-full rounded bg-blue-600 px-4 py-2 font-bold text-black hover:bg-blue-700 focus:outline-none".split(" ").toSet()
+            classes =
+                "w-full rounded bg-blue-600 px-4 py-2 font-bold text-black hover:bg-blue-700 focus:outline-none"
+                    .split(" ")
+                    .toSet()
             type = ButtonType.submit
             +"Generate"
           }
@@ -763,7 +778,10 @@ fun HTML.llmForm() {
 
         div {
           id = "output-container"
-          classes = "mt-6 p-4 rounded border border-blue-500 bg-black text-blue-500 min-h-[100px] whitespace-pre-wrap".split(" ").toSet()
+          classes =
+              "mt-6 p-4 rounded border border-blue-500 bg-black text-blue-500 min-h-[100px] whitespace-pre-wrap"
+                  .split(" ")
+                  .toSet()
           +"Output will appear here..."
         }
       }
@@ -784,7 +802,10 @@ fun HTML.textToSpeechForm() {
       classes = "flex min-h-screen items-center justify-center bg-gray-900 p-4".split(" ").toSet()
 
       div {
-        classes = "w-full max-w-md rounded-lg border-2 border-green-500 bg-black p-6 shadow-lg".split(" ").toSet()
+        classes =
+            "w-full max-w-md rounded-lg border-2 border-green-500 bg-black p-6 shadow-lg"
+                .split(" ")
+                .toSet()
 
         h1 {
           classes = "mb-6 text-2xl font-bold text-green-500".split(" ").toSet()
@@ -804,7 +825,10 @@ fun HTML.textToSpeechForm() {
               +"Enter text to convert to speech"
             }
             textArea {
-              classes = "w-full rounded border border-green-500 bg-black p-2 text-green-500 focus:border-green-700 focus:outline-none".split(" ").toSet()
+              classes =
+                  "w-full rounded border border-green-500 bg-black p-2 text-green-500 focus:border-green-700 focus:outline-none"
+                      .split(" ")
+                      .toSet()
               id = "text-input"
               attributes["name"] = "text"
               attributes["rows"] = "5"
@@ -814,7 +838,10 @@ fun HTML.textToSpeechForm() {
           }
 
           button {
-            classes = "w-full rounded bg-green-600 px-4 py-2 font-bold text-black hover:bg-green-700 focus:outline-none".split(" ").toSet()
+            classes =
+                "w-full rounded bg-green-600 px-4 py-2 font-bold text-black hover:bg-green-700 focus:outline-none"
+                    .split(" ")
+                    .toSet()
             type = ButtonType.submit
             +"Convert to Speech"
           }
@@ -841,28 +868,24 @@ fun Application.configureTemplating() {
     staticResources("/static", "static")
     staticResources("/", "/web")
 
-    get("/") { 
+    get("/") {
       logger.debug("Handling GET request for root path")
-      call.respondHtml { 
+      call.respondHtml {
         logger.debug("Responding with HTML game board wrapper")
-        gameBoardWrapper(game) 
+        gameBoardWrapper(game)
       }
       logger.debug("Responded to GET request for root path")
     }
 
     get("/llm") {
       logger.debug("Handling GET request for LLM form")
-      call.respondHtml {
-        llmForm()
-      }
+      call.respondHtml { llmForm() }
       logger.debug("Responded to GET request for LLM form")
     }
 
     get("/text-to-speech") {
       logger.debug("Handling GET request for text-to-speech form")
-      call.respondHtml {
-        textToSpeechForm()
-      }
+      call.respondHtml { textToSpeechForm() }
       logger.debug("Responded to GET request for text-to-speech form")
     }
 
@@ -876,10 +899,11 @@ fun Application.configureTemplating() {
 
       if (prompt.isBlank()) {
         logger.debug("Prompt is blank, returning error")
-        val errorHtml = createHTML().div {
-          classes = "text-red-500".split(" ").toSet()
-          +"Please enter a prompt."
-        }
+        val errorHtml =
+            createHTML().div {
+              classes = "text-red-500".split(" ").toSet()
+              +"Please enter a prompt."
+            }
         call.respondText(errorHtml, ContentType.Text.Html)
         return@post
       }
@@ -892,17 +916,19 @@ fun Application.configureTemplating() {
         logger.debug("Text generated successfully: ${response.text}")
 
         // Return the generated text
-        val outputHtml = createHTML().div {
-          classes = "text-blue-500 whitespace-pre-wrap".split(" ").toSet()
-          +response.text
-        }
+        val outputHtml =
+            createHTML().div {
+              classes = "text-blue-500 whitespace-pre-wrap".split(" ").toSet()
+              +response.text
+            }
         call.respondText(outputHtml, ContentType.Text.Html)
       } catch (e: Exception) {
         logger.error("Error generating text: ${e.message}", e)
-        val errorHtml = createHTML().div {
-          classes = "text-red-500".split(" ").toSet()
-          +"Error generating text: ${e.message}"
-        }
+        val errorHtml =
+            createHTML().div {
+              classes = "text-red-500".split(" ").toSet()
+              +"Error generating text: ${e.message}"
+            }
         call.respondText(errorHtml, ContentType.Text.Html)
       }
     }
@@ -917,10 +943,11 @@ fun Application.configureTemplating() {
 
       if (text.isBlank()) {
         logger.debug("Text is blank, returning error")
-        val errorHtml = createHTML().div {
-          classes = "text-red-500".split(" ").toSet()
-          +"Please enter some text to convert to speech."
-        }
+        val errorHtml =
+            createHTML().div {
+              classes = "text-red-500".split(" ").toSet()
+              +"Please enter some text to convert to speech."
+            }
         call.respondText(errorHtml, ContentType.Text.Html)
         return@post
       }
@@ -943,34 +970,36 @@ fun Application.configureTemplating() {
         logger.debug("Created data URL for audio")
 
         // Return the audio player HTML
-        val audioPlayerHtml = createHTML().div {
-          h3 {
-            classes = "text-green-500 mb-2".split(" ").toSet()
-            +"Generated Audio"
-          }
-          audio {
-            classes = "w-full".split(" ").toSet()
-            controls = true
-            source {
-              src = dataUrl
-              type = "audio/mpeg"
+        val audioPlayerHtml =
+            createHTML().div {
+              h3 {
+                classes = "text-green-500 mb-2".split(" ").toSet()
+                +"Generated Audio"
+              }
+              audio {
+                classes = "w-full".split(" ").toSet()
+                controls = true
+                source {
+                  src = dataUrl
+                  type = "audio/mpeg"
+                }
+                +"Your browser does not support the audio element."
+              }
+              p {
+                classes = "text-green-400 mt-2 text-sm".split(" ").toSet()
+                +"Text: $text"
+              }
             }
-            +"Your browser does not support the audio element."
-          }
-          p {
-            classes = "text-green-400 mt-2 text-sm".split(" ").toSet()
-            +"Text: $text"
-          }
-        }
 
         call.respondText(audioPlayerHtml, ContentType.Text.Html)
         logger.debug("Responded with audio player HTML")
       } catch (e: Exception) {
         logger.error("Error generating speech: ${e.message}", e)
-        val errorHtml = createHTML().div {
-          classes = "text-red-500".split(" ").toSet()
-          +"Error generating speech: ${e.message ?: "Unknown error"}"
-        }
+        val errorHtml =
+            createHTML().div {
+              classes = "text-red-500".split(" ").toSet()
+              +"Error generating speech: ${e.message ?: "Unknown error"}"
+            }
         call.respondText(errorHtml, ContentType.Text.Html)
       }
     }
@@ -981,7 +1010,8 @@ fun Application.configureTemplating() {
       println("Action ID: $actionId")
 
       // Find the matching action in the current scene state
-      logger.debug("Looking for action in current scene state with ${currentScene.state.actions.size} actions")
+      logger.debug(
+          "Looking for action in current scene state with ${currentScene.state.actions.size} actions")
       val action = currentScene.state.actions.find { it.name == actionId }
 
       if (action != null) {
@@ -999,12 +1029,12 @@ fun Application.configureTemplating() {
       }
     }
 
-    sse("/events") { 
+    sse("/events") {
       logger.debug("SSE connection established")
-      sseEvents.collect { event -> 
+      sseEvents.collect { event ->
         logger.debug("Sending SSE event")
-        send(ServerSentEvent(event)) 
-      } 
+        send(ServerSentEvent(event))
+      }
     }
   }
 }
