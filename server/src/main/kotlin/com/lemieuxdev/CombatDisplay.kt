@@ -62,96 +62,84 @@ class CombatDisplay() : Display {
 
               // Only render character lists if we have a CombatSceneState
               if (sceneState is CombatSceneState) {
-                // Characters section
+                // Turn order section
                 div {
-                  classes = "flex flex-row justify-between gap-8 mb-6".split(" ").toSet()
+                  classes = "mb-6".split(" ").toSet()
+                  h3 {
+                    classes = "text-lg font-bold mb-2 text-yellow-500".split(" ").toSet()
+                    +"Turn Order"
+                  }
 
-                  // Enemies section
+                  // Character list in turn order
                   div {
-                    classes = "flex-1".split(" ").toSet()
-                    h3 {
-                      classes = "text-lg font-bold mb-2 text-red-600".split(" ").toSet()
-                      +"Enemies"
-                    }
-                    
-                    // Enemy list
-                    div {
-                      classes = "space-y-2".split(" ").toSet()
-                      
-                      for (enemy in sceneState.getEnemies()) {
+                    classes = "space-y-2".split(" ").toSet()
+
+                    for ((index, character) in sceneState.turnOrder.withIndex()) {
+                      val isCurrentTurn = index == sceneState.currentTurnIndex
+                      val borderColor = if (character.isEnemy) "border-red-800" else "border-green-800"
+                      val highlightClass = if (isCurrentTurn) "bg-yellow-900 ring-2 ring-yellow-500" else ""
+
+                      div {
+                        classes = "border $borderColor p-2 rounded $highlightClass".split(" ").toSet()
+
+                        // Character name and health
                         div {
-                          classes = "border border-red-800 p-2 rounded".split(" ").toSet()
-                          
-                          // Enemy name and health
-                          div {
-                            classes = "flex justify-between items-center".split(" ").toSet()
-                            span { +"${enemy.name}" }
-                            span { +"HP: ${enemy.health}" }
-                          }
-                          
-                          // Health bar
-                          div {
-                            classes = "w-full bg-gray-700 rounded-full h-2.5 mt-1".split(" ").toSet()
-                            div {
-                              val healthPercent = (enemy.health.coerceAtLeast(0) * 100 / 100).coerceAtMost(100)
-                              style = "width: ${healthPercent}%"
-                              classes = "bg-red-600 h-2.5 rounded-full".split(" ").toSet()
+                          classes = "flex justify-between items-center".split(" ").toSet()
+
+                          // Add turn indicator if it's this character's turn
+                          if (isCurrentTurn) {
+                            span {
+                              classes = "flex items-center".split(" ").toSet()
+                              span {
+                                classes = "text-yellow-500 mr-2".split(" ").toSet()
+                                +"▶ "
+                              }
+                              span { +"${character.name}" }
                             }
+                          } else {
+                            span { +"${character.name}" }
+                          }
+
+                          span { +"HP: ${character.health}" }
+                        }
+
+                        // Health bar
+                        div {
+                          classes = "w-full bg-gray-700 rounded-full h-2.5 mt-1".split(" ").toSet()
+                          div {
+                            val healthPercent = (character.health.coerceAtLeast(0) * 100 / 100).coerceAtMost(100)
+                            style = "width: ${healthPercent}%"
+                            val barColor = if (character.isEnemy) "bg-red-600" else "bg-green-600"
+                            classes = "$barColor h-2.5 rounded-full".split(" ").toSet()
                           }
                         }
-                      }
-                    }
-                  }
-                  
-                  // Friendlies section
-                  div {
-                    classes = "flex-1".split(" ").toSet()
-                    h3 {
-                      classes = "text-lg font-bold mb-2 text-green-600".split(" ").toSet()
-                      +"Friendlies"
-                    }
-                    
-                    // Friendly list
-                    div {
-                      classes = "space-y-2".split(" ").toSet()
-                      
-                      for (friendly in sceneState.getFriendlies()) {
+
+                        // Attack info
                         div {
-                          classes = "border border-green-800 p-2 rounded".split(" ").toSet()
-                          
-                          // Friendly name and health
-                          div {
-                            classes = "flex justify-between items-center".split(" ").toSet()
-                            span { +"${friendly.name}" }
-                            span { +"HP: ${friendly.health}" }
-                          }
-                          
-                          // Health bar
-                          div {
-                            classes = "w-full bg-gray-700 rounded-full h-2.5 mt-1".split(" ").toSet()
-                            div {
-                              val healthPercent = (friendly.health.coerceAtLeast(0) * 100 / 100).coerceAtMost(100)
-                              style = "width: ${healthPercent}%"
-                              classes = "bg-green-600 h-2.5 rounded-full".split(" ").toSet()
-                            }
-                          }
-                          
-                          // Attack info
-                          div {
-                            classes = "mt-1 text-xs".split(" ").toSet()
-                            +"ATK: ${friendly.attack}"
+                          classes = "mt-1 text-xs".split(" ").toSet()
+                          +"ATK: ${character.attack}"
+                        }
+
+                        // Type indicator
+                        div {
+                          classes = "mt-1 text-xs".split(" ").toSet()
+                          val typeText = if (character.isEnemy) "Enemy" else "Friendly"
+                          val typeColor = if (character.isEnemy) "text-red-500" else "text-green-500"
+                          span {
+                            classes = typeColor.split(" ").toSet()
+                            +typeText
                           }
                         }
                       }
                     }
                   }
                 }
-                
+
                 // Game controls
                 // Render buttons from scene state actions
                 div {
                   classes = "mt-4 space-y-2".split(" ").toSet()
-                  
+
                   for (action in sceneState.actions) {
                     button {
                       attributes["hx-post"] = "/action/${action.name}"

@@ -79,7 +79,9 @@ class CombatSceneState(
     override var actions: List<Action> = emptyList(),
     override var showCursor: Boolean = false,
     var characters: MutableList<Character> = mutableListOf(),
-    var selectedEnemyIndex: Int? = null
+    var selectedEnemyIndex: Int? = null,
+    var turnOrder: MutableList<Character> = mutableListOf(),
+    var currentTurnIndex: Int = 0
 ) : SceneState {
     // Get all enemy characters
     fun getEnemies(): List<Character> = characters.filter { it.isEnemy }
@@ -95,6 +97,12 @@ class CombatSceneState(
     // Remove a character from the combat scene (e.g., when defeated)
     fun removeCharacter(character: Character) {
         characters.remove(character)
+        turnOrder.remove(character)
+
+        // Adjust currentTurnIndex if needed
+        if (turnOrder.isNotEmpty() && currentTurnIndex >= turnOrder.size) {
+            currentTurnIndex = 0
+        }
     }
 
     // Get the selected enemy
@@ -104,6 +112,22 @@ class CombatSceneState(
             enemies[selectedEnemyIndex!!]
         } else {
             null
+        }
+    }
+
+    // Get the character whose turn it currently is
+    fun getCurrentTurnCharacter(): Character? {
+        return if (turnOrder.isNotEmpty() && currentTurnIndex < turnOrder.size) {
+            turnOrder[currentTurnIndex]
+        } else {
+            null
+        }
+    }
+
+    // Advance to the next character's turn
+    fun advanceToNextTurn() {
+        if (turnOrder.isNotEmpty()) {
+            currentTurnIndex = (currentTurnIndex + 1) % turnOrder.size
         }
     }
 }
@@ -117,8 +141,15 @@ class CombatScene(override var state: SceneState = CombatSceneState()) : Scene {
         combatState.characters.addAll(enemies)
         combatState.characters.addAll(friendlies)
 
+        // Initialize turn order by shuffling all characters
+        combatState.turnOrder.clear()
+        combatState.turnOrder.addAll(combatState.characters.shuffled())
+        combatState.currentTurnIndex = 0
+
+        val currentCharacter = combatState.getCurrentTurnCharacter()
+
         // Set initial output text
-        combatState.outputText = "Combat has begun! Select an enemy to attack."
+        combatState.outputText = "Combat has begun! ${currentCharacter?.name ?: "Unknown"}'s turn."
 
         // Set up initial actions
         updateActions()
@@ -129,15 +160,17 @@ class CombatScene(override var state: SceneState = CombatSceneState()) : Scene {
         val combatState = state as CombatSceneState
         val actions = mutableListOf<Action>()
 
-        // Add attack action if an enemy is selected
-        val selectedEnemy = combatState.getSelectedEnemy()
-        if (selectedEnemy != null) {
-            actions.add(Action("Attack ${selectedEnemy.name}") {
-                // Perform attack logic
-                val attacker = combatState.getFriendlies().firstOrNull()
-                if (attacker != null) {
-                    selectedEnemy.health -= attacker.attack
-                    combatState.outputText = "${attacker.name} attacks ${selectedEnemy.name} for ${attacker.attack} damage!"
+        val currentCharacter = combatState.getCurrentTurnCharacter()
+
+        // Only allow actions if it's a friendly character's turn
+        if (currentCharacter != null && !currentCharacter.isEnemy) {
+            // Add attack action if an enemy is selected
+            val selectedEnemy = combatState.getSelectedEnemy()
+            if (selectedEnemy != null) {
+                actions.add(Action("Attack ${selectedEnemy.name}") {
+                    // Perform attack logic
+                    selectedEnemy.health -= currentCharacter.attack
+                    combatState.outputText = "${currentCharacter.name} attacks ${selectedEnemy.name} for ${currentCharacter.attack} damage!"
 
                     // Check if enemy is defeated
                     if (selectedEnemy.health <= 0) {
@@ -145,24 +178,57 @@ class CombatScene(override var state: SceneState = CombatSceneState()) : Scene {
                         combatState.removeCharacter(selectedEnemy)
                     }
 
-                    // Reset selected enemy
+                    // Reset selected enemy and advance to next turn
                     combatState.selectedEnemyIndex = null
-                    updateActions()
-                }
-            })
-        }
+                    endTurn()
+                })
+            }
 
-        // Add enemy selection actions
-        val enemies = combatState.getEnemies()
-        enemies.forEachIndexed { index, enemy ->
-            actions.add(Action("Select ${enemy.name}") {
-                combatState.selectedEnemyIndex = index
-                combatState.outputText = "${enemy.name} selected as target."
-                updateActions()
+            // Add enemy selection actions
+            val enemies = combatState.getEnemies()
+            enemies.forEachIndexed { index, enemy ->
+                actions.add(Action("Select ${enemy.name}") {
+                    combatState.selectedEnemyIndex = index
+                    combatState.outputText = "${enemy.name} selected as target."
+                    updateActions()
+                })
+            }
+        } else if (currentCharacter != null && currentCharacter.isEnemy) {
+            // If it's an enemy's turn, add an action to simulate enemy turn
+            actions.add(Action("Continue") {
+                // Simulate enemy attack on a random friendly
+                val friendlies = combatState.getFriendlies()
+                if (friendlies.isNotEmpty()) {
+                    val target = friendlies.random()
+                    target.health -= currentCharacter.attack
+                    combatState.outputText = "${currentCharacter.name} attacks ${target.name} for ${currentCharacter.attack} damage!"
+
+                    // Check if friendly is defeated
+                    if (target.health <= 0) {
+                        combatState.outputText += "\n${target.name} has been defeated!"
+                        combatState.removeCharacter(target)
+                    }
+                }
+
+                // End the enemy's turn
+                endTurn()
             })
         }
 
         combatState.actions = actions
+    }
+
+    // End the current turn and advance to the next character
+    fun endTurn() {
+        val combatState = state as CombatSceneState
+        combatState.advanceToNextTurn()
+
+        val nextCharacter = combatState.getCurrentTurnCharacter()
+        if (nextCharacter != null) {
+            combatState.outputText += "\nIt's now ${nextCharacter.name}'s turn."
+        }
+
+        updateActions()
     }
 }
 
