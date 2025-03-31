@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.runBlocking
 
 class CombatSceneTest {
 
@@ -55,7 +56,7 @@ class CombatSceneTest {
     assertNotNull(initialCharacter)
 
     // End the turn
-    combatScene.endTurn()
+    runBlocking { combatScene.endTurn() }
 
     // Verify that the turn has advanced
     val nextCharacter = combatState.getCurrentTurnCharacter()
@@ -63,7 +64,7 @@ class CombatSceneTest {
     assertTrue(initialCharacter != nextCharacter)
 
     // End the turn again
-    combatScene.endTurn()
+    runBlocking { combatScene.endTurn() }
 
     // Verify that we've cycled back to the first character
     val thirdCharacter = combatState.getCurrentTurnCharacter()
