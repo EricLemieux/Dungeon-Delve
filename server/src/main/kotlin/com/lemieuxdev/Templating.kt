@@ -10,9 +10,14 @@ import io.ktor.server.routing.*
 import io.ktor.server.sse.SSE
 import io.ktor.server.sse.sse
 import io.ktor.sse.ServerSentEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 class Action(
     val name: String,
@@ -23,10 +28,18 @@ class Action(
      */
     private val process: suspend () -> Unit = {},
 ) {
-  private val preProcess: suspend () -> Unit = {}
+  companion object {
+    private val logger: Logger = LoggerFactory.getLogger(Action::class.java)
+  }
+  private val preProcess: suspend () -> Unit = {
+    logger.debug("Executing pre-process for action: $name")
+  }
   private val postProcess: suspend () -> Unit = {
+    logger.debug("Executing post-process for action: $name")
     val gameBoard = createHTML().main { gameBoard(game) }
+    logger.debug("Created game board HTML")
     sseEvents.emit(gameBoard)
+    logger.debug("Emitted game board to SSE events")
   }
 
   /**
@@ -34,9 +47,14 @@ class Action(
    * steps are being called.
    */
   suspend fun run() {
+    logger.debug("Running action: $name")
+    logger.debug("Executing pre-process step")
     preProcess()
+    logger.debug("Executing main process step")
     process()
+    logger.debug("Executing post-process step")
     postProcess()
+    logger.debug("Action completed: $name")
   }
 }
 
@@ -54,7 +72,14 @@ interface Adventure {
 }
 
 class DefaultAdventureState() : AdventureState {
-  override var actions: List<Action> = listOf(Action("test") { println("Testing") })
+  companion object {
+    private val logger: Logger = LoggerFactory.getLogger(DefaultAdventureState::class.java)
+  }
+
+  override var actions: List<Action> = listOf(Action("test") { 
+    logger.debug("Executing test action")
+    println("Testing") 
+  })
   override var friendlyCharacters: MutableList<Character> = mutableListOf(
     Character("Hero", false, 100, 10),
     Character("Companion", false, 75, 7)
@@ -88,169 +113,275 @@ class CombatSceneState(
     var turnOrder: MutableList<Character> = mutableListOf(),
     var currentTurnIndex: Int = 0
 ) : SceneState {
+    companion object {
+        private val logger: Logger = LoggerFactory.getLogger(CombatSceneState::class.java)
+    }
     // Get all enemy characters
-    fun getEnemies(): List<Character> = characters.filter { it.isEnemy }
+    fun getEnemies(): List<Character> {
+        logger.debug("Getting all enemy characters")
+        return characters.filter { it.isEnemy }
+    }
 
     // Get all friendly characters
-    fun getFriendlies(): List<Character> = characters.filter { !it.isEnemy }
+    fun getFriendlies(): List<Character> {
+        logger.debug("Getting all friendly characters")
+        return characters.filter { !it.isEnemy }
+    }
 
     // Add a character to the combat scene
     fun addCharacter(character: Character) {
+        logger.debug("Adding character: ${character.name}")
         characters.add(character)
     }
 
     // Remove a character from the combat scene (e.g., when defeated)
     fun removeCharacter(character: Character) {
+        logger.debug("Removing character: ${character.name}")
         characters.remove(character)
         turnOrder.remove(character)
 
         // Adjust currentTurnIndex if needed
         if (turnOrder.isNotEmpty() && currentTurnIndex >= turnOrder.size) {
+            logger.debug("Adjusting currentTurnIndex from $currentTurnIndex to 0 because it's >= turnOrder.size (${turnOrder.size})")
             currentTurnIndex = 0
+        } else {
+            logger.debug("No need to adjust currentTurnIndex: $currentTurnIndex, turnOrder.size: ${turnOrder.size}")
         }
     }
 
     // Get the selected enemy
     fun getSelectedEnemy(): Character? {
+        logger.debug("Getting selected enemy with index: $selectedEnemyIndex")
         val enemies = getEnemies()
-        return if (selectedEnemyIndex != null && selectedEnemyIndex!! < enemies.size) {
-            enemies[selectedEnemyIndex!!]
+        if (selectedEnemyIndex != null && selectedEnemyIndex!! < enemies.size) {
+            logger.debug("Selected enemy found: ${enemies[selectedEnemyIndex!!].name}")
+            return enemies[selectedEnemyIndex!!]
         } else {
-            null
+            logger.debug("No selected enemy found")
+            return null
         }
     }
 
     // Get the character whose turn it currently is
     fun getCurrentTurnCharacter(): Character? {
-        return if (turnOrder.isNotEmpty() && currentTurnIndex < turnOrder.size) {
-            turnOrder[currentTurnIndex]
+        logger.debug("Getting current turn character with index: $currentTurnIndex")
+        if (turnOrder.isNotEmpty() && currentTurnIndex < turnOrder.size) {
+            logger.debug("Current turn character: ${turnOrder[currentTurnIndex].name}")
+            return turnOrder[currentTurnIndex]
         } else {
-            null
+            logger.debug("No current turn character found")
+            return null
         }
     }
 
     // Advance to the next character's turn
     fun advanceToNextTurn() {
+        logger.debug("Advancing to next turn from index: $currentTurnIndex")
         if (turnOrder.isNotEmpty()) {
             currentTurnIndex = (currentTurnIndex + 1) % turnOrder.size
+            logger.debug("Advanced to next turn, new index: $currentTurnIndex")
+        } else {
+            logger.debug("Cannot advance turn, turnOrder is empty")
         }
     }
 }
 
 /** Combat scene implementation */
-class CombatScene(override var state: SceneState = CombatSceneState()) : Scene {
+class CombatScene(override var state: SceneState = CombatSceneState()) : Scene, CoroutineScope by CoroutineScope(kotlinx.coroutines.Dispatchers.Default) {
+    companion object {
+        private val logger: Logger = LoggerFactory.getLogger(CombatScene::class.java)
+    }
     // Initialize the combat scene with characters
     fun initialize(enemies: List<Character>, friendlies: List<Character>) {
+        logger.debug("Initializing combat scene with ${enemies.size} enemies and ${friendlies.size} friendlies")
         val combatState = state as CombatSceneState
         combatState.characters.clear()
+        logger.debug("Adding enemies to combat scene")
         combatState.characters.addAll(enemies)
+        logger.debug("Adding friendlies to combat scene")
         combatState.characters.addAll(friendlies)
 
         // Initialize turn order by shuffling all characters
+        logger.debug("Initializing turn order")
         combatState.turnOrder.clear()
         combatState.turnOrder.addAll(combatState.characters.shuffled())
         combatState.currentTurnIndex = 0
+        logger.debug("Turn order initialized with ${combatState.turnOrder.size} characters")
 
         val currentCharacter = combatState.getCurrentTurnCharacter()
+        logger.debug("Current character: ${currentCharacter?.name ?: "Unknown"}")
 
         // Set initial output text
         combatState.outputText = "Combat has begun! ${currentCharacter?.name ?: "Unknown"}'s turn."
+        logger.debug("Initial output text set")
 
         // Set up initial actions
+        logger.debug("Setting up initial actions")
         updateActions()
     }
 
     // Update available actions based on the current state
     fun updateActions() {
+        logger.debug("Updating actions")
         val combatState = state as CombatSceneState
         val actions = mutableListOf<Action>()
 
         val currentCharacter = combatState.getCurrentTurnCharacter()
+        logger.debug("Current character: ${currentCharacter?.name ?: "null"}")
 
         // Only allow actions if it's a friendly character's turn
         if (currentCharacter != null && !currentCharacter.isEnemy) {
+            logger.debug("Current character is friendly, adding player actions")
+
             // Add attack action if an enemy is selected
             val selectedEnemy = combatState.getSelectedEnemy()
             if (selectedEnemy != null) {
+                logger.debug("Enemy selected: ${selectedEnemy.name}, adding attack action")
                 actions.add(Action("Attack ${selectedEnemy.name}") {
+                    logger.debug("Executing attack on ${selectedEnemy.name}")
                     // Perform attack logic
                     selectedEnemy.health -= currentCharacter.attack
+                    logger.debug("${currentCharacter.name} attacks ${selectedEnemy.name} for ${currentCharacter.attack} damage, enemy health now: ${selectedEnemy.health}")
                     combatState.outputText = "${currentCharacter.name} attacks ${selectedEnemy.name} for ${currentCharacter.attack} damage!"
 
                     // Check if enemy is defeated
                     if (selectedEnemy.health <= 0) {
+                        logger.debug("${selectedEnemy.name} has been defeated")
                         combatState.outputText += "\n${selectedEnemy.name} has been defeated!"
                         combatState.removeCharacter(selectedEnemy)
+                    } else {
+                        logger.debug("${selectedEnemy.name} survived with ${selectedEnemy.health} health")
                     }
 
                     // Reset selected enemy and advance to next turn
+                    logger.debug("Resetting selected enemy and ending turn")
                     combatState.selectedEnemyIndex = null
                     endTurn()
                 })
+            } else {
+                logger.debug("No enemy selected, adding enemy selection actions")
             }
 
             // Add enemy selection actions
             val enemies = combatState.getEnemies()
+            logger.debug("Adding selection actions for ${enemies.size} enemies")
             enemies.forEachIndexed { index, enemy ->
                 actions.add(Action("Select ${enemy.name}") {
+                    logger.debug("Selected enemy: ${enemy.name} at index $index")
                     combatState.selectedEnemyIndex = index
                     combatState.outputText = "${enemy.name} selected as target."
                     updateActions()
                 })
             }
         } else if (currentCharacter != null && currentCharacter.isEnemy) {
-            // If it's an enemy's turn, automatically attack a random friendly
-            val friendlies = combatState.getFriendlies()
-            if (friendlies.isNotEmpty()) {
-                val target = friendlies.random()
-                target.health -= currentCharacter.attack
-                combatState.outputText = "${currentCharacter.name} attacks ${target.name} for ${currentCharacter.attack} damage!"
-
-                // Check if friendly is defeated
-                if (target.health <= 0) {
-                    combatState.outputText += "\n${target.name} has been defeated!"
-                    combatState.removeCharacter(target)
-                }
-
-                // End the enemy's turn
-                endTurn()
-            } else {
-                // If no friendlies left, just end the turn
-                endTurn()
+            logger.debug("Current character is enemy: ${currentCharacter.name}, processing enemy turn")
+            // If it's an enemy's turn, show thinking indicator and add delay
+            launch {
+                processEnemyTurn(currentCharacter)
             }
+        } else {
+            logger.debug("No current character, no actions added")
         }
 
+        logger.debug("Setting ${actions.size} actions to combat state")
         combatState.actions = actions
     }
 
     // End the current turn and advance to the next character
-    fun endTurn() {
+    suspend fun endTurn() {
+        logger.debug("Ending current turn")
         val combatState = state as CombatSceneState
         combatState.advanceToNextTurn()
 
         val nextCharacter = combatState.getCurrentTurnCharacter()
         if (nextCharacter != null) {
+            logger.debug("Next character's turn: ${nextCharacter.name}")
             combatState.outputText += "\nIt's now ${nextCharacter.name}'s turn."
+        } else {
+            logger.debug("No next character found")
         }
 
+        logger.debug("Updating actions for next turn")
         updateActions()
+
+        val gameBoard = createHTML().main { gameBoard(game) }
+        logger.debug("Created game board HTML")
+        sseEvents.emit(gameBoard)
+    }
+
+    // Process enemy turn with delay and thinking indicator
+    private suspend fun processEnemyTurn(enemy: Character) {
+        logger.debug("Processing enemy turn for ${enemy.name}")
+        val combatState = state as CombatSceneState
+        val friendlies = combatState.getFriendlies()
+        logger.debug("Found ${friendlies.size} friendly characters")
+
+        if (friendlies.isNotEmpty()) {
+            logger.debug("Friendlies present, enemy will attack")
+            // Show thinking indicator
+            combatState.showCursor = true
+            combatState.outputText = "${enemy.name} is thinking..."
+            logger.debug("Set thinking indicator and output text")
+
+            // TODO: this appears to not be working
+            logger.debug("Adding delay to simulate thinking")
+
+            // Add delay to simulate thinking
+            delay(2000) // 2 seconds delay
+            logger.debug("Delay completed")
+
+            // Select target and attack
+            val target = friendlies.random()
+            logger.debug("Selected random target: ${target.name}")
+            combatState.showCursor = false
+            target.health -= enemy.attack
+            logger.debug("${enemy.name} attacks ${target.name} for ${enemy.attack} damage, target health now: ${target.health}")
+            combatState.outputText = "${enemy.name} attacks ${target.name} for ${enemy.attack} damage!"
+
+            // Check if friendly is defeated
+            if (target.health <= 0) {
+                logger.debug("${target.name} has been defeated")
+                combatState.outputText += "\n${target.name} has been defeated!"
+                combatState.removeCharacter(target)
+            } else {
+                logger.debug("${target.name} survived with ${target.health} health")
+            }
+
+            // End the enemy's turn
+            logger.debug("Ending enemy's turn")
+            endTurn()
+        } else {
+            // If no friendlies left, just end the turn
+            logger.debug("No friendlies left, ending turn without action")
+            endTurn()
+        }
     }
 }
 
 /** Display controls, this dictates the presentation of the game state to the users. */
 interface Display {
+  companion object {
+    private val logger: Logger = LoggerFactory.getLogger(Display::class.java)
+  }
+
   /** Render as html */
   fun render(adventureState: AdventureState, sceneState: SceneState): FlowContent.() -> Unit {
+    logger.debug("Default rendering method called")
     println("rendering")
     return { h1 { +"TODO" } }
   }
 }
 
 class TerminalDisplay() : Display {
+  companion object {
+    private val logger: Logger = LoggerFactory.getLogger(TerminalDisplay::class.java)
+  }
+
   override fun render(
       adventureState: AdventureState,
       sceneState: SceneState
   ): FlowContent.() -> Unit {
+    logger.debug("Rendering terminal display")
     return {
       div {
         classes = "flex min-h-screen items-center justify-center bg-gray-900 p-4".split(" ").toSet()
@@ -363,27 +494,48 @@ data class Character(
     val isEnemy: Boolean,
     var health: Int,
     var attack: Int
-)
+) {
+    companion object {
+        private val logger: Logger = LoggerFactory.getLogger(Character::class.java)
+    }
+}
 
 // TODO: Refactor or remove this
 class Game(
     var player: Player?,
     var monster: Monster?,
-)
-
-class Player(var attack: Int = 10)
-
-fun Player.hitMonster(monster: Monster) {
-  monster.health -= attack
+) {
+    companion object {
+        private val logger: Logger = LoggerFactory.getLogger(Game::class.java)
+    }
 }
 
-class Monster(var health: Int = 50)
+class Player(var attack: Int = 10) {
+  companion object {
+    private val logger: Logger = LoggerFactory.getLogger(Player::class.java)
+  }
+}
+
+fun Player.hitMonster(monster: Monster) {
+  val logger: Logger = LoggerFactory.getLogger("com.lemieuxdev.Player.hitMonster")
+  logger.debug("Player attacking monster with attack: $attack")
+  monster.health -= attack
+  logger.debug("Monster health reduced to: ${monster.health}")
+}
+
+class Monster(var health: Int = 50) {
+  companion object {
+    private val logger: Logger = LoggerFactory.getLogger(Monster::class.java)
+  }
+}
 
 val game = Game(player = Player(), monster = Monster())
 
 val sseEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 64)
 
 fun HTML.gameBoardWrapper(gameState: Game) {
+  val logger: Logger = LoggerFactory.getLogger("com.lemieuxdev.gameBoardWrapper")
+  logger.debug("Rendering game board wrapper")
   head {
     title { +"Dungeon Delve" }
     // PWA meta tags
@@ -409,21 +561,31 @@ fun HTML.gameBoardWrapper(gameState: Game) {
         raw(
             """
                 // Theme selection
+                console.debug('Checking theme preference');
                 if (localStorage.theme === 'light') {
+                  console.debug('Using light theme');
                   document.documentElement.classList.remove('dark')
                 } else {
+                  console.debug('Using dark theme');
                   document.documentElement.classList.add('dark')
                 }
 
                 // Service worker registration
+                console.debug('Checking if service worker is supported');
                 if ('serviceWorker' in navigator) {
+                  console.debug('Service worker is supported, adding load event listener');
                   window.addEventListener('load', function() {
+                    console.debug('Window loaded, registering service worker');
                     navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                      console.debug('ServiceWorker registration successful with scope: ', registration.scope);
                       console.log('ServiceWorker registration successful with scope: ', registration.scope);
                     }, function(err) {
+                      console.debug('ServiceWorker registration failed: ', err);
                       console.log('ServiceWorker registration failed: ', err);
                     });
                   });
+                } else {
+                  console.debug('Service worker is not supported');
                 }
             """
                 .trimIndent())
@@ -506,38 +668,67 @@ var currentScene: Scene = object : Scene { override var state: SceneState = scen
 var currentDisplay: Display = TerminalDisplay()
 
 fun MAIN.gameBoard(gameState: Game) {
+  val logger: Logger = LoggerFactory.getLogger("com.lemieuxdev.gameBoard")
+  logger.debug("Rendering game board with game state: $gameState")
   id = "game-board"
 
+  logger.debug("Applying current display render with adventure state and scene state")
   apply(currentDisplay.render(adventureState, currentScene.state))
+  logger.debug("Game board rendered")
 }
 
 fun Application.configureTemplating() {
+  val logger: Logger = LoggerFactory.getLogger("com.lemieuxdev.Templating")
+  logger.debug("Configuring templating")
+
   install(SSE)
+  logger.debug("SSE installed")
 
   routing {
+    logger.debug("Configuring routes")
     staticResources("/static", "static")
     staticResources("/", "/web")
 
-    get("/") { call.respondHtml { gameBoardWrapper(game) } }
+    get("/") { 
+      logger.debug("Handling GET request for root path")
+      call.respondHtml { 
+        logger.debug("Responding with HTML game board wrapper")
+        gameBoardWrapper(game) 
+      }
+      logger.debug("Responded to GET request for root path")
+    }
 
     post("/action/{actionId}") {
       val actionId = call.parameters["actionId"]
+      logger.debug("Received action request with ID: $actionId")
       println("Action ID: $actionId")
 
       // Find the matching action in the current scene state
+      logger.debug("Looking for action in current scene state with ${currentScene.state.actions.size} actions")
       val action = currentScene.state.actions.find { it.name == actionId }
 
       if (action != null) {
+        logger.debug("Action found: ${action.name}, executing")
         // Execute the action
         action.run()
+        logger.debug("Action executed successfully")
 
         call.respondHtml(HttpStatusCode.OK) {}
+        logger.debug("Responded with OK")
       } else {
+        logger.debug("Action not found with ID: $actionId")
         call.respondHtml(HttpStatusCode.NotFound) { body { h1 { +"Action not found" } } }
+        logger.debug("Responded with NotFound")
       }
     }
 
-    sse("/events") { sseEvents.collect { event -> send(ServerSentEvent(event)) } }
+    sse("/events") { 
+      logger.debug("SSE connection established")
+      sseEvents.collect { event -> 
+        logger.debug("Sending SSE event")
+        send(ServerSentEvent(event)) 
+      } 
+    }
   }
 }
 
