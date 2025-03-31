@@ -23,10 +23,22 @@ class OpenAIService(private val client: OpenAIClient) {
   suspend fun complete(request: LLMRequest): LLMResponse {
     logger.debug("Completing prompt: ${request.prompt}")
 
+    // Create messages list, adding system message if character is provided
+    val messages = mutableListOf<OpenAIChatMessage>()
+
+    // Add system message for character if provided
+    request.character?.let {
+      logger.debug("Using character: ${it.name} with system prompt: ${it.personality}")
+      messages.add(it.toSystemMessage())
+    }
+
+    // Add user message
+    messages.add(OpenAIChatMessage(role = "user", content = request.prompt))
+
     val openAIRequest =
         OpenAIChatCompletionRequest(
             model = request.config.model,
-            messages = listOf(OpenAIChatMessage(role = "user", content = request.prompt)),
+            messages = messages,
             temperature = request.config.temperature,
             maxTokens = request.config.maxTokens)
 

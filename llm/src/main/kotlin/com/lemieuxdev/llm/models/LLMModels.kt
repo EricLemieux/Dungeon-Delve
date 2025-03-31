@@ -11,7 +11,12 @@ data class LLMConfig(
 )
 
 /** Request model for LLM API */
-@Serializable data class LLMRequest(val prompt: String, val config: LLMConfig = LLMConfig())
+@Serializable
+data class LLMRequest(
+    val prompt: String,
+    val config: LLMConfig = LLMConfig(),
+    val character: Character? = null
+)
 
 /** Response model for LLM API */
 @Serializable
