@@ -48,6 +48,9 @@ dependencies {
   // Eleven Labs API module
   implementation(project(":elevenlabs"))
 
+  // LLM API module
+  implementation(project(":llm"))
+
   testImplementation("io.ktor:ktor-server-test-host-jvm")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }

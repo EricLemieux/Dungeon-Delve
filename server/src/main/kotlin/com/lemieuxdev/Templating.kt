@@ -3,6 +3,7 @@ package com.lemieuxdev
 import com.lemieuxdev.Adventure.AdventureState
 import com.lemieuxdev.Scene.SceneState
 import com.lemieuxdev.elevenlabs.ElevenLabsAPI
+import com.lemieuxdev.llm.LLMAPI
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -711,6 +712,65 @@ fun MAIN.gameBoard(gameState: Game) {
 
 // Eleven Labs API is now in a separate module
 
+// HTML template for the LLM form
+fun HTML.llmForm() {
+  head {
+    title { +"Large Language Model" }
+    meta(name = "viewport", content = "width=device-width, initial-scale=1.0")
+    link(rel = "stylesheet", href = "/static/output.css")
+    script(src = "https://unpkg.com/htmx.org@2.0.4") {}
+  }
+  body {
+    div {
+      classes = "flex min-h-screen items-center justify-center bg-gray-900 p-4".split(" ").toSet()
+
+      div {
+        classes = "w-full max-w-md rounded-lg border-2 border-blue-500 bg-black p-6 shadow-lg".split(" ").toSet()
+
+        h1 {
+          classes = "mb-6 text-2xl font-bold text-blue-500".split(" ").toSet()
+          +"Large Language Model"
+        }
+
+        form {
+          id = "llm-form"
+          attributes["hx-post"] = "/llm"
+          attributes["hx-target"] = "#output-container"
+
+          div {
+            classes = "mb-4".split(" ").toSet()
+            label {
+              classes = "mb-2 block text-sm font-medium text-blue-500".split(" ").toSet()
+              htmlFor = "prompt-input"
+              +"Enter your prompt"
+            }
+            textArea {
+              classes = "w-full rounded border border-blue-500 bg-black p-2 text-blue-500 focus:border-blue-700 focus:outline-none".split(" ").toSet()
+              id = "prompt-input"
+              attributes["name"] = "prompt"
+              attributes["rows"] = "5"
+              attributes["required"] = "true"
+              attributes["placeholder"] = "Type your prompt here..."
+            }
+          }
+
+          button {
+            classes = "w-full rounded bg-blue-600 px-4 py-2 font-bold text-black hover:bg-blue-700 focus:outline-none".split(" ").toSet()
+            type = ButtonType.submit
+            +"Generate"
+          }
+        }
+
+        div {
+          id = "output-container"
+          classes = "mt-6 p-4 rounded border border-blue-500 bg-black text-blue-500 min-h-[100px] whitespace-pre-wrap".split(" ").toSet()
+          +"Output will appear here..."
+        }
+      }
+    }
+  }
+}
+
 // HTML template for the text-to-speech form
 fun HTML.textToSpeechForm() {
   head {
@@ -790,12 +850,61 @@ fun Application.configureTemplating() {
       logger.debug("Responded to GET request for root path")
     }
 
+    get("/llm") {
+      logger.debug("Handling GET request for LLM form")
+      call.respondHtml {
+        llmForm()
+      }
+      logger.debug("Responded to GET request for LLM form")
+    }
+
     get("/text-to-speech") {
       logger.debug("Handling GET request for text-to-speech form")
       call.respondHtml {
         textToSpeechForm()
       }
       logger.debug("Responded to GET request for text-to-speech form")
+    }
+
+    post("/llm") {
+      logger.debug("Handling POST request for LLM")
+
+      // Get the prompt from the form
+      val formParameters = call.receiveParameters()
+      val prompt = formParameters["prompt"] ?: ""
+      logger.debug("Received prompt: $prompt")
+
+      if (prompt.isBlank()) {
+        logger.debug("Prompt is blank, returning error")
+        val errorHtml = createHTML().div {
+          classes = "text-red-500".split(" ").toSet()
+          +"Please enter a prompt."
+        }
+        call.respondText(errorHtml, ContentType.Text.Html)
+        return@post
+      }
+
+      try {
+        // Generate the text using the LLM API
+        logger.debug("Generating text for prompt")
+        val llmAPI = LLMAPI.fromEnvironment()
+        val response = llmAPI.complete(prompt)
+        logger.debug("Text generated successfully: ${response.text}")
+
+        // Return the generated text
+        val outputHtml = createHTML().div {
+          classes = "text-blue-500 whitespace-pre-wrap".split(" ").toSet()
+          +response.text
+        }
+        call.respondText(outputHtml, ContentType.Text.Html)
+      } catch (e: Exception) {
+        logger.error("Error generating text: ${e.message}", e)
+        val errorHtml = createHTML().div {
+          classes = "text-red-500".split(" ").toSet()
+          +"Error generating text: ${e.message}"
+        }
+        call.respondText(errorHtml, ContentType.Text.Html)
+      }
     }
 
     post("/text-to-speech") {
