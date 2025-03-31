@@ -2,10 +2,21 @@ package com.lemieuxdev
 
 import com.lemieuxdev.Adventure.AdventureState
 import com.lemieuxdev.Scene.SceneState
-import io.ktor.http.HttpStatusCode
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.http.content.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.html.*
 import io.ktor.server.http.content.staticResources
+import io.ktor.server.request.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sse.SSE
 import io.ktor.server.sse.sse
@@ -16,8 +27,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.*
 
 class Action(
     val name: String,
@@ -694,6 +708,120 @@ fun MAIN.gameBoard(gameState: Game) {
   logger.debug("Game board rendered")
 }
 
+// Data models for Eleven Labs API
+@Serializable
+data class ElevenLabsTextToSpeechRequest(
+    val text: String,
+    val model_id: String = "eleven_monolingual_v1",
+    val voice_settings: VoiceSettings = VoiceSettings()
+)
+
+@Serializable
+data class VoiceSettings(
+    val stability: Float = 0.5f,
+    val similarity_boost: Float = 0.5f
+)
+
+// HTTP client for Eleven Labs API
+val httpClient = HttpClient(CIO) {
+    install(ContentNegotiation) {
+        json(Json {
+            prettyPrint = true
+            isLenient = true
+            ignoreUnknownKeys = true
+        })
+    }
+    install(Logging) {
+        level = LogLevel.INFO
+    }
+}
+
+// Function to call Eleven Labs API
+suspend fun generateSpeech(text: String, voiceId: String = "21m00Tcm4TlvDq8ikWAM"): ByteArray {
+    val logger: Logger = LoggerFactory.getLogger("com.lemieuxdev.generateSpeech")
+    logger.debug("Generating speech for text: $text")
+
+    // Replace with your actual API key
+    val apiKey = "YOUR_ELEVEN_LABS_API_KEY"
+
+    val request = ElevenLabsTextToSpeechRequest(text = text)
+
+    logger.debug("Sending request to Eleven Labs API")
+    val response = httpClient.post("https://api.elevenlabs.io/v1/text-to-speech/$voiceId") {
+        contentType(ContentType.Application.Json)
+        header("xi-api-key", apiKey)
+        setBody(request)
+    }
+
+    logger.debug("Received response from Eleven Labs API with status: ${response.status}")
+
+    if (response.status.isSuccess()) {
+        logger.debug("Successfully generated speech")
+        return response.body()
+    } else {
+        logger.error("Failed to generate speech: ${response.bodyAsText()}")
+        throw Exception("Failed to generate speech: ${response.status}")
+    }
+}
+
+// HTML template for the text-to-speech form
+fun HTML.textToSpeechForm() {
+  head {
+    title { +"Text to Speech" }
+    meta(name = "viewport", content = "width=device-width, initial-scale=1.0")
+    link(rel = "stylesheet", href = "/static/output.css")
+    script(src = "https://unpkg.com/htmx.org@2.0.4") {}
+  }
+  body {
+    div {
+      classes = "flex min-h-screen items-center justify-center bg-gray-900 p-4".split(" ").toSet()
+
+      div {
+        classes = "w-full max-w-md rounded-lg border-2 border-green-500 bg-black p-6 shadow-lg".split(" ").toSet()
+
+        h1 {
+          classes = "mb-6 text-2xl font-bold text-green-500".split(" ").toSet()
+          +"Text to Speech Converter"
+        }
+
+        form {
+          id = "tts-form"
+          attributes["hx-post"] = "/text-to-speech"
+          attributes["hx-target"] = "#audio-container"
+
+          div {
+            classes = "mb-4".split(" ").toSet()
+            label {
+              classes = "mb-2 block text-sm font-medium text-green-500".split(" ").toSet()
+              htmlFor = "text-input"
+              +"Enter text to convert to speech"
+            }
+            textArea {
+              classes = "w-full rounded border border-green-500 bg-black p-2 text-green-500 focus:border-green-700 focus:outline-none".split(" ").toSet()
+              id = "text-input"
+              attributes["name"] = "text"
+              attributes["rows"] = "5"
+              attributes["required"] = "true"
+              attributes["placeholder"] = "Type your text here..."
+            }
+          }
+
+          button {
+            classes = "w-full rounded bg-green-600 px-4 py-2 font-bold text-black hover:bg-green-700 focus:outline-none".split(" ").toSet()
+            type = ButtonType.submit
+            +"Convert to Speech"
+          }
+        }
+
+        div {
+          id = "audio-container"
+          classes = "mt-6".split(" ").toSet()
+        }
+      }
+    }
+  }
+}
+
 fun Application.configureTemplating() {
   val logger: Logger = LoggerFactory.getLogger("com.lemieuxdev.Templating")
   logger.debug("Configuring templating")
@@ -713,6 +841,81 @@ fun Application.configureTemplating() {
         gameBoardWrapper(game) 
       }
       logger.debug("Responded to GET request for root path")
+    }
+
+    get("/text-to-speech") {
+      logger.debug("Handling GET request for text-to-speech form")
+      call.respondHtml {
+        textToSpeechForm()
+      }
+      logger.debug("Responded to GET request for text-to-speech form")
+    }
+
+    post("/text-to-speech") {
+      logger.debug("Handling POST request for text-to-speech")
+
+      // Get the text from the form
+      val formParameters = call.receiveParameters()
+      val text = formParameters["text"] ?: ""
+      logger.debug("Received text: $text")
+
+      if (text.isBlank()) {
+        logger.debug("Text is blank, returning error")
+        val errorHtml = createHTML().div {
+          classes = "text-red-500".split(" ").toSet()
+          +"Please enter some text to convert to speech."
+        }
+        call.respondText(errorHtml, ContentType.Text.Html)
+        return@post
+      }
+
+      try {
+        // Generate the speech audio
+        logger.debug("Generating speech for text")
+        val audioData = generateSpeech(text)
+        logger.debug("Speech generated successfully, size: ${audioData.size} bytes")
+
+        // Create a unique filename for the audio
+        val filename = "speech_${UUID.randomUUID()}.mp3"
+        logger.debug("Generated filename: $filename")
+
+        // Save the audio data to a temporary file or serve it directly
+        // For simplicity, we'll serve it directly with a data URL
+        val base64Audio = Base64.getEncoder().encodeToString(audioData)
+        val dataUrl = "data:audio/mpeg;base64,$base64Audio"
+        logger.debug("Created data URL for audio")
+
+        // Return the audio player HTML
+        val audioPlayerHtml = createHTML().div {
+          h3 {
+            classes = "text-green-500 mb-2".split(" ").toSet()
+            +"Generated Audio"
+          }
+          audio {
+            classes = "w-full".split(" ").toSet()
+            controls = true
+            source {
+              src = dataUrl
+              type = "audio/mpeg"
+            }
+            +"Your browser does not support the audio element."
+          }
+          p {
+            classes = "text-green-400 mt-2 text-sm".split(" ").toSet()
+            +"Text: $text"
+          }
+        }
+
+        call.respondText(audioPlayerHtml, ContentType.Text.Html)
+        logger.debug("Responded with audio player HTML")
+      } catch (e: Exception) {
+        logger.error("Error generating speech: ${e.message}", e)
+        val errorHtml = createHTML().div {
+          classes = "text-red-500".split(" ").toSet()
+          +"Error generating speech: ${e.message ?: "Unknown error"}"
+        }
+        call.respondText(errorHtml, ContentType.Text.Html)
+      }
     }
 
     post("/action/{actionId}") {

@@ -38,6 +38,12 @@ dependencies {
   implementation("ch.qos.logback:logback-classic:$logback_version")
   implementation("io.ktor:ktor-server-config-yaml-jvm")
   implementation("io.ktor:ktor-server-sse")
+
+  // HTTP client for external API calls
+  implementation("io.ktor:ktor-client-core")
+  implementation("io.ktor:ktor-client-cio")
+  implementation("io.ktor:ktor-client-content-negotiation")
+  implementation("io.ktor:ktor-client-logging")
   testImplementation("io.ktor:ktor-server-test-host-jvm")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }
