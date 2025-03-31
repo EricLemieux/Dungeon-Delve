@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8888:8888"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ELEVEN_LABS_API_KEY=${ELEVEN_LABS_API_KEY}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8888"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
