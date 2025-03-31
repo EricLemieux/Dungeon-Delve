@@ -741,8 +741,8 @@ suspend fun generateSpeech(text: String, voiceId: String = "21m00Tcm4TlvDq8ikWAM
     val logger: Logger = LoggerFactory.getLogger("com.lemieuxdev.generateSpeech")
     logger.debug("Generating speech for text: $text")
 
-    // Replace with your actual API key
-    val apiKey = "YOUR_ELEVEN_LABS_API_KEY"
+    // Get API key from environment variable
+    val apiKey = System.getenv("ELEVEN_LABS_API_KEY") ?: throw IllegalStateException("ELEVEN_LABS_API_KEY environment variable is not set")
 
     val request = ElevenLabsTextToSpeechRequest(text = text)
 
