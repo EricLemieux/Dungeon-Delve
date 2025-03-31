@@ -199,25 +199,25 @@ class CombatScene(override var state: SceneState = CombatSceneState()) : Scene {
                 })
             }
         } else if (currentCharacter != null && currentCharacter.isEnemy) {
-            // If it's an enemy's turn, add an action to simulate enemy turn
-            actions.add(Action("Continue") {
-                // Simulate enemy attack on a random friendly
-                val friendlies = combatState.getFriendlies()
-                if (friendlies.isNotEmpty()) {
-                    val target = friendlies.random()
-                    target.health -= currentCharacter.attack
-                    combatState.outputText = "${currentCharacter.name} attacks ${target.name} for ${currentCharacter.attack} damage!"
+            // If it's an enemy's turn, automatically attack a random friendly
+            val friendlies = combatState.getFriendlies()
+            if (friendlies.isNotEmpty()) {
+                val target = friendlies.random()
+                target.health -= currentCharacter.attack
+                combatState.outputText = "${currentCharacter.name} attacks ${target.name} for ${currentCharacter.attack} damage!"
 
-                    // Check if friendly is defeated
-                    if (target.health <= 0) {
-                        combatState.outputText += "\n${target.name} has been defeated!"
-                        combatState.removeCharacter(target)
-                    }
+                // Check if friendly is defeated
+                if (target.health <= 0) {
+                    combatState.outputText += "\n${target.name} has been defeated!"
+                    combatState.removeCharacter(target)
                 }
 
                 // End the enemy's turn
                 endTurn()
-            })
+            } else {
+                // If no friendlies left, just end the turn
+                endTurn()
+            }
         }
 
         combatState.actions = actions
