@@ -49,11 +49,16 @@ interface Adventure {
 
   interface AdventureState {
     var actions: List<Action>
+    var friendlyCharacters: MutableList<Character>
   }
 }
 
 class DefaultAdventureState() : AdventureState {
   override var actions: List<Action> = listOf(Action("test") { println("Testing") })
+  override var friendlyCharacters: MutableList<Character> = mutableListOf(
+    Character("Hero", false, 100, 10),
+    Character("Companion", false, 75, 7)
+  )
 }
 
 /** This is an individual scene, adventures are made up of scenes that connect to each other. */
@@ -477,16 +482,13 @@ val sceneState: SceneState =
                                     currentScene = combatScene
                                     currentDisplay = combatDisplay
 
-                                    // Initialize combat with enemies and friendlies
+                                    // Initialize combat with enemies and friendlies from adventure state
                                     val enemies = listOf(
                                         Character("Goblin", true, 30, 5),
                                         Character("Orc", true, 50, 8)
                                     )
-                                    val friendlies = listOf(
-                                        Character("Hero", false, 100, 10),
-                                        Character("Companion", false, 75, 7)
-                                    )
-                                    combatScene.initialize(enemies, friendlies)
+                                    // Use friendly characters from adventure state
+                                    combatScene.initialize(enemies, adventureState.friendlyCharacters)
                                 }
                             )
                           })
