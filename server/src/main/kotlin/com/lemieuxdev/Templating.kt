@@ -547,6 +547,87 @@ class TerminalDisplay() : Display {
                   }
                 }
 
+                // Combat-specific UI elements
+                if (sceneState is CombatSceneState) {
+                  // Turn order section
+                  div {
+                    classes = "mb-6".split(" ").toSet()
+                    h3 {
+                      classes = "text-lg font-bold mb-2 text-yellow-500".split(" ").toSet()
+                      +"Turn Order"
+                    }
+
+                    // Character list in turn order
+                    div {
+                      classes = "space-y-2".split(" ").toSet()
+
+                      for ((index, character) in sceneState.turnOrder.withIndex()) {
+                        val isCurrentTurn = index == sceneState.currentTurnIndex
+                        val borderColor =
+                            if (character.isEnemy) "border-red-800" else "border-green-800"
+                        val highlightClass =
+                            if (isCurrentTurn) "bg-yellow-900 ring-2 ring-yellow-500" else ""
+
+                        div {
+                          classes =
+                              "border $borderColor p-2 rounded $highlightClass".split(" ").toSet()
+
+                          // Character name and health
+                          div {
+                            classes = "flex justify-between items-center".split(" ").toSet()
+
+                            // Add turn indicator if it's this character's turn
+                            if (isCurrentTurn) {
+                              span {
+                                classes = "flex items-center".split(" ").toSet()
+                                span {
+                                  classes = "text-yellow-500 mr-2".split(" ").toSet()
+                                  +"▶ "
+                                }
+                                span { +"${character.name}" }
+                              }
+                            } else {
+                              span { +"${character.name}" }
+                            }
+
+                            span { +"HP: ${character.health}" }
+                          }
+
+                          // Health bar
+                          div {
+                            classes = "w-full bg-gray-700 rounded-full h-2.5 mt-1".split(" ").toSet()
+                            div {
+                              val healthPercent =
+                                  (character.health.coerceAtLeast(0) * 100 / 100).coerceAtMost(100)
+                              style = "width: ${healthPercent}%"
+                              val barColor = if (character.isEnemy) "bg-red-600" else "bg-green-600"
+                              classes = "$barColor h-2.5 rounded-full".split(" ").toSet()
+                            }
+                          }
+
+                          // Attack info
+                          div {
+                            classes = "mt-1 text-xs".split(" ").toSet()
+                            +"ATK: ${character.attack}"
+                          }
+
+                          // Type indicator
+                          div {
+                            classes = "mt-1 text-xs".split(" ").toSet()
+                            val typeText = if (character.isEnemy) "Enemy" else "Friendly"
+                            val typeColor =
+                                if (character.isEnemy) "text-red-500" else "text-green-500"
+                            span {
+                              classes = typeColor.split(" ").toSet()
+                              +typeText
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+
                 // Game controls
                 // Render buttons from scene state actions
                 for (action in sceneState.actions) {
@@ -849,7 +930,7 @@ val sceneState: SceneState =
                                     Action("Enter Combat") {
                                       // Switch to combat scene
                                       currentScene = combatScene
-                                      currentDisplay = combatDisplay
+                                      // Don't switch display, keep using the same display for combat
 
                                       // Initialize combat with enemies and friendlies from
                                       // adventure state
