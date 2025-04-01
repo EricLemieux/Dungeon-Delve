@@ -126,7 +126,8 @@ class CombatSceneState(
     var characters: MutableList<Character> = mutableListOf(),
     var selectedEnemyIndex: Int? = null,
     var turnOrder: MutableList<Character> = mutableListOf(),
-    var currentTurnIndex: Int = 0
+    var currentTurnIndex: Int = 0,
+    var recentlyAttackedCharacter: Character? = null
 ) : SceneState {
   companion object {
     private val logger: Logger = LoggerFactory.getLogger(CombatSceneState::class.java)
@@ -268,6 +269,8 @@ class CombatScene(override var state: SceneState = CombatSceneState()) :
               logger.debug("Executing attack on ${selectedEnemy.name}")
               // Perform attack logic
               selectedEnemy.health -= currentCharacter.attack
+              // Set the recently attacked character for animation
+              combatState.recentlyAttackedCharacter = selectedEnemy
               logger.debug(
                   "${currentCharacter.name} attacks ${selectedEnemy.name} for ${currentCharacter.attack} damage, enemy health now: ${selectedEnemy.health}")
               combatState.outputText =
@@ -324,6 +327,22 @@ class CombatScene(override var state: SceneState = CombatSceneState()) :
   suspend fun endTurn() {
     logger.debug("Ending current turn")
     val combatState = state as CombatSceneState
+
+    // If there's a recently attacked character, emit the game board state to show the animation
+    if (combatState.recentlyAttackedCharacter != null) {
+      logger.debug("Recently attacked character found, emitting game board state to show animation")
+      val gameBoard = createHTML().main { gameBoard(game) }
+      sseEvents.emit(gameBoard)
+
+      // Add delay to allow the animation to play
+      logger.debug("Adding delay to allow animation to play")
+      delay(600) // 600ms delay, slightly longer than the animation duration (500ms)
+
+      // Reset the recently attacked character to stop the animation
+      combatState.recentlyAttackedCharacter = null
+      logger.debug("Reset recently attacked character")
+    }
+
     combatState.advanceToNextTurn()
 
     val nextCharacter = combatState.getCurrentTurnCharacter()
@@ -373,6 +392,8 @@ class CombatScene(override var state: SceneState = CombatSceneState()) :
       logger.debug("Selected random target: ${target.name}")
       combatState.showCursor = false
       target.health -= enemy.attack
+      // Set the recently attacked character for animation
+      combatState.recentlyAttackedCharacter = target
       logger.debug(
           "${enemy.name} attacks ${target.name} for ${enemy.attack} damage, target health now: ${target.health}")
       combatState.outputText = "${enemy.name} attacks ${target.name} for ${enemy.attack} damage!"

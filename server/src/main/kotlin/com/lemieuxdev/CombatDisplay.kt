@@ -80,10 +80,16 @@ class CombatDisplay() : Display {
                           if (character.isEnemy) "border-red-800" else "border-green-800"
                       val highlightClass =
                           if (isCurrentTurn) "bg-yellow-900 ring-2 ring-yellow-500" else ""
+                      // Add animation class if this character was recently attacked
+                      val animationClass =
+                          if (character === sceneState.recentlyAttackedCharacter) "animate-damage"
+                          else ""
 
                       div {
                         classes =
-                            "border $borderColor p-2 rounded $highlightClass".split(" ").toSet()
+                            "border $borderColor p-2 rounded $highlightClass $animationClass"
+                                .split(" ")
+                                .toSet()
 
                         // Character name and health
                         div {
