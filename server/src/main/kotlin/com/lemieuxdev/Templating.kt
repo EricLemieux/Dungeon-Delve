@@ -422,10 +422,11 @@ class TerminalDisplay() : Display {
   ): FlowContent.() -> Unit {
     logger.debug("Rendering terminal display")
     return {
-      // Add JavaScript for tab switching
+      // Add JavaScript for tab switching and admin panel toggle
       script {
         unsafe {
-          raw("""
+          raw(
+              """
             function showTab(tabId) {
               // Hide all tabs
               document.querySelectorAll('[id$="-tab"]').forEach(tab => {
@@ -451,7 +452,50 @@ class TerminalDisplay() : Display {
                 activeButton.classList.add('text-green-500', 'border-green-500');
               }
             }
-          """.trimIndent())
+
+            // Function to toggle admin panel visibility
+            function toggleAdminPanel() {
+              const adminPanel = document.getElementById('admin-panel');
+              if (adminPanel) {
+                const isVisible = !adminPanel.classList.contains('hidden');
+                if (isVisible) {
+                  adminPanel.classList.add('hidden');
+                  localStorage.setItem('adminPanelVisible', 'false');
+                } else {
+                  adminPanel.classList.remove('hidden');
+                  localStorage.setItem('adminPanelVisible', 'true');
+                }
+              }
+            }
+
+            // Check admin panel visibility preference on load
+            document.addEventListener('DOMContentLoaded', function() {
+              const adminPanel = document.getElementById('admin-panel');
+              if (adminPanel) {
+                const isVisible = localStorage.getItem('adminPanelVisible') === 'true';
+                if (isVisible) {
+                  adminPanel.classList.remove('hidden');
+                } else {
+                  adminPanel.classList.add('hidden');
+                }
+              }
+            });
+          """
+                  .trimIndent())
+        }
+      }
+
+      // Admin panel toggle button - visible on all screen sizes
+      div {
+        classes = "w-full bg-gray-900 flex justify-end p-2".split(" ").toSet()
+
+        button {
+          classes =
+              "py-1 px-3 text-yellow-500 font-mono border border-yellow-500 rounded bg-gray-900 hover:bg-gray-800 text-sm"
+                  .split(" ")
+                  .toSet()
+          attributes["onclick"] = "toggleAdminPanel()"
+          +"Toggle Admin Panel"
         }
       }
 
@@ -464,17 +508,26 @@ class TerminalDisplay() : Display {
           classes = "flex border-b border-gray-800".split(" ").toSet()
 
           button {
-            classes = "tab-button flex-1 py-2 px-4 text-green-500 font-mono border-b-2 border-green-500 bg-gray-900".split(" ").toSet()
+            classes =
+                "tab-button flex-1 py-2 px-4 text-green-500 font-mono border-b-2 border-green-500 bg-gray-900"
+                    .split(" ")
+                    .toSet()
             attributes["onclick"] = "showTab('main-tab')"
             +"Main"
           }
           button {
-            classes = "tab-button flex-1 py-2 px-4 text-gray-500 font-mono border-b-2 border-transparent bg-gray-900".split(" ").toSet()
+            classes =
+                "tab-button flex-1 py-2 px-4 text-gray-500 font-mono border-b-2 border-transparent bg-gray-900"
+                    .split(" ")
+                    .toSet()
             attributes["onclick"] = "showTab('stats-tab')"
             +"Stats"
           }
           button {
-            classes = "tab-button flex-1 py-2 px-4 text-gray-500 font-mono border-b-2 border-transparent bg-gray-900".split(" ").toSet()
+            classes =
+                "tab-button flex-1 py-2 px-4 text-gray-500 font-mono border-b-2 border-transparent bg-gray-900"
+                    .split(" ")
+                    .toSet()
             attributes["onclick"] = "showTab('inventory-tab')"
             +"Inventory"
           }
@@ -483,7 +536,10 @@ class TerminalDisplay() : Display {
 
       // Main container - flex on mobile, grid on desktop
       div {
-        classes = "flex flex-col md:grid md:grid-cols-3 md:grid-rows-3 min-h-screen bg-gray-900 p-4 gap-4".split(" ").toSet()
+        classes =
+            "flex flex-col md:grid md:grid-cols-3 md:grid-rows-3 min-h-screen bg-gray-900 p-4 gap-4"
+                .split(" ")
+                .toSet()
 
         // Main terminal display - full width on mobile, center cell on desktop
         div {
@@ -491,11 +547,17 @@ class TerminalDisplay() : Display {
           classes = "md:col-start-2 md:row-start-2 block".split(" ").toSet()
 
           div {
-            classes = "relative w-full overflow-hidden rounded-lg border-8 border-gray-800 bg-gray-900 shadow-2xl".split(" ").toSet()
+            classes =
+                "relative w-full overflow-hidden rounded-lg border-8 border-gray-800 bg-gray-900 shadow-2xl"
+                    .split(" ")
+                    .toSet()
 
             // Monitor frame gradient
             div {
-              classes = "absolute inset-0 rounded-sm bg-gradient-to-b from-gray-800 to-gray-700 opacity-10".split(" ").toSet()
+              classes =
+                  "absolute inset-0 rounded-sm bg-gradient-to-b from-gray-800 to-gray-700 opacity-10"
+                      .split(" ")
+                      .toSet()
             }
 
             // Power indicator
@@ -503,7 +565,10 @@ class TerminalDisplay() : Display {
               classes = "absolute right-4 top-4 flex items-center gap-2".split(" ").toSet()
 
               div {
-                classes = "h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_2px_rgba(74,222,128,0.6)]".split(" ").toSet()
+                classes =
+                    "h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_2px_rgba(74,222,128,0.6)]"
+                        .split(" ")
+                        .toSet()
               }
 
               // Terminal icon placeholder
@@ -512,26 +577,39 @@ class TerminalDisplay() : Display {
 
             // Screen with CRT effect
             div {
-              classes = "relative overflow-hidden rounded-sm bg-black p-6 shadow-inner".split(" ").toSet()
+              classes =
+                  "relative overflow-hidden rounded-sm bg-black p-6 shadow-inner".split(" ").toSet()
 
               // CRT glow
               div {
-                classes = "pointer-events-none absolute inset-0 rounded-sm bg-green-500 opacity-[0.03] mix-blend-screen".split(" ").toSet()
+                classes =
+                    "pointer-events-none absolute inset-0 rounded-sm bg-green-500 opacity-[0.03] mix-blend-screen"
+                        .split(" ")
+                        .toSet()
               }
 
               // Scan lines
               div {
-                classes = "pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent,transparent_2px,rgba(0,0,0,0.05)_3px,transparent_3px)] bg-[length:100%_4px]".split(" ").toSet()
+                classes =
+                    "pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent,transparent_2px,rgba(0,0,0,0.05)_3px,transparent_3px)] bg-[length:100%_4px]"
+                        .split(" ")
+                        .toSet()
               }
 
               // Screen curvature
               div {
-                classes = "pointer-events-none absolute inset-0 rounded-sm bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.3)_100%)]".split(" ").toSet()
+                classes =
+                    "pointer-events-none absolute inset-0 rounded-sm bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.3)_100%)]"
+                        .split(" ")
+                        .toSet()
               }
 
               // Terminal content
               div {
-                classes = "flex flex-col gap-2 relative min-h-[60vh] font-mono text-sm text-green-500 md:text-base".split(" ").toSet()
+                classes =
+                    "flex flex-col gap-2 relative min-h-[60vh] font-mono text-sm text-green-500 md:text-base"
+                        .split(" ")
+                        .toSet()
 
                 // Output text
                 pre {
@@ -595,7 +673,8 @@ class TerminalDisplay() : Display {
 
                           // Health bar
                           div {
-                            classes = "w-full bg-gray-700 rounded-full h-2.5 mt-1".split(" ").toSet()
+                            classes =
+                                "w-full bg-gray-700 rounded-full h-2.5 mt-1".split(" ").toSet()
                             div {
                               val healthPercent =
                                   (character.health.coerceAtLeast(0) * 100 / 100).coerceAtMost(100)
@@ -634,7 +713,10 @@ class TerminalDisplay() : Display {
                   button {
                     attributes["hx-post"] = "/action/${action.name}"
                     attributes["hx-swap"] = "none"
-                    classes = "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4".split(" ").toSet()
+                    classes =
+                        "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4"
+                            .split(" ")
+                            .toSet()
                     +action.name
                   }
                 }
@@ -652,14 +734,17 @@ class TerminalDisplay() : Display {
           classes = "hidden md:block md:col-start-2 md:row-start-1".split(" ").toSet()
 
           div {
-            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
-            h2 { 
+            classes =
+                "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl"
+                    .split(" ")
+                    .toSet()
+            h2 {
               classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
-              +"Character Stats" 
+              +"Character Stats"
             }
-            div { 
+            div {
               classes = "font-mono text-green-500".split(" ").toSet()
-              +"Health: 100/100" 
+              +"Health: 100/100"
             }
           }
         }
@@ -670,14 +755,17 @@ class TerminalDisplay() : Display {
           classes = "hidden md:block md:col-start-3 md:row-start-2".split(" ").toSet()
 
           div {
-            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
-            h2 { 
+            classes =
+                "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl"
+                    .split(" ")
+                    .toSet()
+            h2 {
               classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
-              +"Inventory" 
+              +"Inventory"
             }
-            div { 
+            div {
               classes = "font-mono text-green-500".split(" ").toSet()
-              +"Gold: 250" 
+              +"Gold: 250"
             }
           }
         }
@@ -687,10 +775,13 @@ class TerminalDisplay() : Display {
           classes = "hidden md:block md:col-start-1 md:row-start-2".split(" ").toSet()
 
           div {
-            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
-            h2 { 
+            classes =
+                "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl"
+                    .split(" ")
+                    .toSet()
+            h2 {
               classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
-              +"Map" 
+              +"Map"
             }
           }
         }
@@ -700,10 +791,13 @@ class TerminalDisplay() : Display {
           classes = "hidden md:block md:col-start-2 md:row-start-3".split(" ").toSet()
 
           div {
-            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
-            h2 { 
+            classes =
+                "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl"
+                    .split(" ")
+                    .toSet()
+            h2 {
               classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
-              +"Journal" 
+              +"Journal"
             }
           }
         }
@@ -713,14 +807,17 @@ class TerminalDisplay() : Display {
           classes = "hidden md:block md:col-start-1 md:row-start-1".split(" ").toSet()
 
           div {
-            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
-            h2 { 
+            classes =
+                "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl"
+                    .split(" ")
+                    .toSet()
+            h2 {
               classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
-              +"Skills" 
+              +"Skills"
             }
-            div { 
+            div {
               classes = "font-mono text-green-500".split(" ").toSet()
-              +"Combat: 5" 
+              +"Combat: 5"
             }
           }
         }
@@ -730,14 +827,17 @@ class TerminalDisplay() : Display {
           classes = "hidden md:block md:col-start-3 md:row-start-1".split(" ").toSet()
 
           div {
-            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
-            h2 { 
+            classes =
+                "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl"
+                    .split(" ")
+                    .toSet()
+            h2 {
               classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
-              +"Quests" 
+              +"Quests"
             }
-            div { 
+            div {
               classes = "font-mono text-green-500".split(" ").toSet()
-              +"Active: 2" 
+              +"Active: 2"
             }
           }
         }
@@ -747,14 +847,17 @@ class TerminalDisplay() : Display {
           classes = "hidden md:block md:col-start-3 md:row-start-3".split(" ").toSet()
 
           div {
-            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
-            h2 { 
+            classes =
+                "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl"
+                    .split(" ")
+                    .toSet()
+            h2 {
               classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
-              +"Equipment" 
+              +"Equipment"
             }
-            div { 
+            div {
               classes = "font-mono text-green-500".split(" ").toSet()
-              +"Weapon: Sword" 
+              +"Weapon: Sword"
             }
           }
         }
@@ -764,14 +867,115 @@ class TerminalDisplay() : Display {
           classes = "hidden md:block md:col-start-1 md:row-start-3".split(" ").toSet()
 
           div {
-            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
-            h2 { 
+            classes =
+                "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl"
+                    .split(" ")
+                    .toSet()
+            h2 {
               classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
-              +"Notes" 
+              +"Notes"
             }
-            div { 
+            div {
               classes = "font-mono text-green-500".split(" ").toSet()
-              +"Remember to check the cave" 
+              +"Remember to check the cave"
+            }
+          }
+        }
+
+        // Admin panel - full width below the grid, hidden by default
+        div {
+          id = "admin-panel"
+          classes =
+              "hidden w-full mt-8 p-4 rounded-lg border-4 border-yellow-500 bg-gray-900 shadow-xl"
+                  .split(" ")
+                  .toSet()
+
+          h2 {
+            classes = "text-xl font-mono text-yellow-500 mb-4".split(" ").toSet()
+            +"Admin Panel"
+          }
+
+          // Game state section
+          div {
+            classes = "mb-6".split(" ").toSet()
+            h3 {
+              classes = "text-lg font-mono text-yellow-500 mb-2".split(" ").toSet()
+              +"Game State"
+            }
+
+            // Game state info
+            div {
+              classes = "grid grid-cols-2 gap-4".split(" ").toSet()
+
+              div {
+                classes = "font-mono text-yellow-500".split(" ").toSet()
+                +"Current Scene: ${currentScene::class.simpleName}"
+              }
+
+              div {
+                classes = "font-mono text-yellow-500".split(" ").toSet()
+                +"Friendly Characters: ${adventureState.friendlyCharacters.size}"
+              }
+            }
+          }
+
+          // Admin actions section
+          div {
+            classes = "mb-6".split(" ").toSet()
+            h3 {
+              classes = "text-lg font-mono text-yellow-500 mb-2".split(" ").toSet()
+              +"Admin Actions"
+            }
+
+            // Admin action buttons
+            div {
+              classes = "flex flex-wrap gap-2".split(" ").toSet()
+
+              button {
+                classes =
+                    "py-1 px-3 text-black font-mono bg-yellow-500 rounded hover:bg-yellow-600"
+                        .split(" ")
+                        .toSet()
+                attributes["hx-post"] = "/admin/reset-game"
+                attributes["hx-swap"] = "none"
+                +"Reset Game"
+              }
+
+              button {
+                classes =
+                    "py-1 px-3 text-black font-mono bg-yellow-500 rounded hover:bg-yellow-600"
+                        .split(" ")
+                        .toSet()
+                attributes["hx-post"] = "/admin/add-health"
+                attributes["hx-swap"] = "none"
+                +"Add Health"
+              }
+
+              button {
+                classes =
+                    "py-1 px-3 text-black font-mono bg-yellow-500 rounded hover:bg-yellow-600"
+                        .split(" ")
+                        .toSet()
+                attributes["hx-post"] = "/admin/add-enemy"
+                attributes["hx-swap"] = "none"
+                +"Add Enemy"
+              }
+            }
+          }
+
+          // Debug logs section
+          div {
+            h3 {
+              classes = "text-lg font-mono text-yellow-500 mb-2".split(" ").toSet()
+              +"Debug Logs"
+            }
+
+            pre {
+              classes =
+                  "p-2 bg-gray-800 rounded font-mono text-yellow-500 text-sm h-32 overflow-auto"
+                      .split(" ")
+                      .toSet()
+              +"[System] Admin panel initialized\n[Game] Current scene: ${currentScene::class.simpleName}\n[Game] Friendly characters: ${adventureState.friendlyCharacters.size}"
             }
           }
         }
@@ -930,7 +1134,8 @@ val sceneState: SceneState =
                                     Action("Enter Combat") {
                                       // Switch to combat scene
                                       currentScene = combatScene
-                                      // Don't switch display, keep using the same display for combat
+                                      // Don't switch display, keep using the same display for
+                                      // combat
 
                                       // Initialize combat with enemies and friendlies from
                                       // adventure state
@@ -1280,6 +1485,73 @@ fun Application.configureTemplating() {
         call.respondHtml(HttpStatusCode.NotFound) { body { h1 { +"Action not found" } } }
         logger.debug("Responded with NotFound")
       }
+    }
+
+    // Admin action routes
+    post("/admin/reset-game") {
+      logger.debug("Admin action: Reset game")
+
+      // Reset the game state
+      adventureState.friendlyCharacters.clear()
+      adventureState.friendlyCharacters.addAll(
+          mutableListOf(Character("Hero", false, 100, 10), Character("Companion", false, 75, 7)))
+
+      // Reset to initial scene
+      currentScene =
+          object : Scene {
+            override var state: SceneState = sceneState
+          }
+
+      // Update the game board
+      val gameBoard = createHTML().main { gameBoard(game) }
+      sseEvents.emit(gameBoard)
+
+      call.respondHtml(HttpStatusCode.OK) {}
+    }
+
+    post("/admin/add-health") {
+      logger.debug("Admin action: Add health")
+
+      // Add health to all friendly characters
+      adventureState.friendlyCharacters.forEach { character ->
+        character.health += 20
+        logger.debug("Added 20 health to ${character.name}, new health: ${character.health}")
+      }
+
+      // Update the game board
+      val gameBoard = createHTML().main { gameBoard(game) }
+      sseEvents.emit(gameBoard)
+
+      call.respondHtml(HttpStatusCode.OK) {}
+    }
+
+    post("/admin/add-enemy") {
+      logger.debug("Admin action: Add enemy")
+
+      // Check if we're in a combat scene
+      if (currentScene is CombatScene) {
+        val combatScene = currentScene as CombatScene
+        val combatState = combatScene.state as CombatSceneState
+
+        // Add a new enemy
+        val newEnemy = Character("Goblin Reinforcement", true, 30, 5)
+        combatState.addCharacter(newEnemy)
+        combatState.turnOrder.add(newEnemy)
+
+        logger.debug("Added new enemy: ${newEnemy.name}")
+        combatState.outputText += "\nA new enemy appears: ${newEnemy.name}!"
+
+        // Update actions
+        combatScene.updateActions()
+      } else {
+        logger.debug("Not in combat scene, cannot add enemy")
+      }
+
+      // Update the game board
+      val gameBoard = createHTML().main { gameBoard(game) }
+      sseEvents.emit(gameBoard)
+
+      call.respondHtml(HttpStatusCode.OK) {}
     }
 
     sse("/events") {
