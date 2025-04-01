@@ -9,6 +9,44 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
+ * Enum representing different archetypes/themes for scene descriptions. This controls the style and
+ * content of generated scenes.
+ */
+enum class SceneArchetype(val description: String) {
+  SWORDS_AND_DRAGONS(
+      "A high fantasy setting with medieval weapons, magic, and mythical creatures like dragons"),
+  ELDRITCH_HORROR("A dark, cosmic horror setting with unsettling, otherworldly elements"),
+  STEAMPUNK(
+      "A Victorian-era setting with advanced steam-powered technology and mechanical contraptions"),
+  CYBERPUNK(
+      "A futuristic setting with high technology, cybernetic enhancements, and corporate dystopia"),
+  WILD_WEST("A frontier setting with cowboys, outlaws, saloons, and dusty landscapes"),
+  SPACE_OPERA(
+      "A grand, epic science fiction setting with interstellar travel and alien civilizations"),
+  FAIRY_TALE(
+      "A whimsical, enchanted setting with magical creatures, talking animals, and moral lessons"),
+  POST_APOCALYPTIC(
+      "A devastated world after a catastrophic event, focusing on survival and rebuilding");
+
+  /**
+   * Returns a system prompt modifier based on the archetype. This is used to guide the LLM in
+   * generating appropriate scene descriptions.
+   */
+  fun getSystemPromptModifier(): String {
+    return """
+      Scene Archetype: ${this.name}
+
+      Description: ${this.description}
+
+      When creating scene descriptions, incorporate elements, imagery, and atmosphere
+      consistent with this archetype. The tone, objects, creatures, and overall feel
+      should reflect this theme while remaining appropriate for the context.
+    """
+        .trimIndent()
+  }
+}
+
+/**
  * Implementation of LLMDataExtractor for extracting scene descriptions. This class is used to
  * generate detailed descriptions of scenes that a character can see.
  */
@@ -36,7 +74,7 @@ class SceneDescriptionExtractor(
      */
     val DEFAULT_SYSTEM_PROMPT =
         """
-            You are a descriptive narrator for a fantasy role-playing game.
+            You are a descriptive narrator for a role-playing game.
             Your task is to create vivid, detailed descriptions of scenes that a character can see.
 
             Focus on the following aspects:
@@ -52,6 +90,9 @@ class SceneDescriptionExtractor(
             Stick to describing what can be objectively observed in the scene.
         """
             .trimIndent()
+
+    /** The default scene archetype to use if none is specified. */
+    val DEFAULT_ARCHETYPE = SceneArchetype.SWORDS_AND_DRAGONS
   }
 
   private val logger: Logger = LoggerFactory.getLogger(SceneDescriptionExtractor::class.java)
@@ -66,8 +107,26 @@ class SceneDescriptionExtractor(
    * @throws Exception if the extraction fails
    */
   override suspend fun extractData(prompt: String, systemPrompt: String?): JsonElement {
+    return extractData(prompt, systemPrompt, DEFAULT_ARCHETYPE)
+  }
+
+  /**
+   * Extracts a scene description from an LLM response based on the given prompt and archetype.
+   *
+   * @param prompt The text prompt describing the scene to be detailed
+   * @param systemPrompt Optional system prompt to guide the LLM in generating the scene
+   *   description, defaults to DEFAULT_SYSTEM_PROMPT if not provided
+   * @param archetype The scene archetype to use for theming the description
+   * @return A JsonElement containing the structured scene description
+   * @throws Exception if the extraction fails
+   */
+  suspend fun extractData(
+      prompt: String,
+      systemPrompt: String?,
+      archetype: SceneArchetype
+  ): JsonElement {
     val effectiveSystemPrompt = systemPrompt ?: DEFAULT_SYSTEM_PROMPT
-    val fullPrompt = buildPrompt(prompt, effectiveSystemPrompt)
+    val fullPrompt = buildPrompt(prompt, effectiveSystemPrompt, archetype)
     logger.debug("Extracting scene description with prompt: $fullPrompt")
 
     val response = llmProvider.complete(LLMRequest(prompt = fullPrompt))
@@ -96,7 +155,27 @@ class SceneDescriptionExtractor(
       serializer: KSerializer<T>,
       systemPrompt: String?
   ): T {
-    val jsonElement = extractData(prompt, systemPrompt)
+    return extractData(prompt, serializer, systemPrompt, DEFAULT_ARCHETYPE)
+  }
+
+  /**
+   * Extracts a scene description from an LLM response and parses it into a specific type.
+   *
+   * @param prompt The text prompt describing the scene to be detailed
+   * @param serializer The serializer to use for parsing the JSON response
+   * @param systemPrompt Optional system prompt to guide the LLM in generating the scene
+   *   description, defaults to DEFAULT_SYSTEM_PROMPT if not provided
+   * @param archetype The scene archetype to use for theming the description
+   * @return An instance of type T parsed from the JSON response
+   * @throws Exception if the extraction or parsing fails
+   */
+  suspend fun <T> extractData(
+      prompt: String,
+      serializer: KSerializer<T>,
+      systemPrompt: String?,
+      archetype: SceneArchetype
+  ): T {
+    val jsonElement = extractData(prompt, systemPrompt, archetype)
     return try {
       json.decodeFromJsonElement(serializer, jsonElement)
     } catch (e: Exception) {
@@ -113,6 +192,19 @@ class SceneDescriptionExtractor(
    * @return The full prompt with JSON instructions
    */
   private fun buildPrompt(prompt: String, systemPrompt: String): String {
+    return buildPrompt(prompt, systemPrompt, DEFAULT_ARCHETYPE)
+  }
+
+  /**
+   * Builds the full prompt to send to the LLM, including instructions to return JSON. This
+   * overloaded version allows specifying a scene archetype.
+   *
+   * @param prompt The user's prompt describing the scene
+   * @param systemPrompt The system prompt for scene description
+   * @param archetype The scene archetype to use for theming the description
+   * @return The full prompt with JSON instructions
+   */
+  private fun buildPrompt(prompt: String, systemPrompt: String, archetype: SceneArchetype): String {
     val jsonInstructions =
         """
             Return your response in valid JSON format with the following structure:
@@ -137,9 +229,13 @@ class SceneDescriptionExtractor(
         """
             .trimIndent()
 
+    val archetypeModifier = archetype.getSystemPromptModifier()
+
     val fullSystemPrompt =
         """
             $systemPrompt
+
+            $archetypeModifier
 
             $jsonInstructions
         """

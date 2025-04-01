@@ -1,5 +1,6 @@
 package com.lemieuxdev.llm.examples
 
+import com.lemieuxdev.llm.SceneArchetype
 import com.lemieuxdev.llm.SceneDescriptionExtractor
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonElement
@@ -96,6 +97,53 @@ object SceneDescriptionExtractorExample {
     }
   }
 
+  /** Example of using different scene archetypes to generate themed scene descriptions. */
+  fun extractWithArchetypesExample() {
+    runBlocking {
+      // Create an instance of SceneDescriptionExtractor using OpenAI
+      val extractor = SceneDescriptionExtractor.withOpenAI()
+
+      // Define a base prompt that we'll use with different archetypes
+      val basePrompt = "Describe a castle on a hill."
+
+      // Try different archetypes
+      val archetypes =
+          listOf(
+              SceneArchetype.SWORDS_AND_DRAGONS,
+              SceneArchetype.ELDRITCH_HORROR,
+              SceneArchetype.STEAMPUNK,
+              SceneArchetype.FAIRY_TALE)
+
+      for (archetype in archetypes) {
+        try {
+          println("\n=== ${archetype.name} ARCHETYPE ===")
+          println("Description: ${archetype.description}")
+
+          // Extract the data using the specified archetype
+          val sceneDescription: SceneDescriptionExtractor.SceneDescription =
+              extractor.extractData(
+                  prompt = basePrompt,
+                  serializer = SceneDescriptionExtractor.SceneDescription.serializer(),
+                  systemPrompt = null,
+                  archetype = archetype)
+
+          // Print the visual description to see how the archetype affects it
+          println("\nVisual Description:")
+          println(sceneDescription.scene.visual)
+
+          // Print one point of interest
+          if (sceneDescription.points_of_interest.isNotEmpty()) {
+            val poi = sceneDescription.points_of_interest.first()
+            println("\nPoint of Interest: ${poi.name}")
+            println(poi.description)
+          }
+        } catch (e: Exception) {
+          println("Error extracting data with ${archetype.name} archetype: ${e.message}")
+        }
+      }
+    }
+  }
+
   /** Main function to run the examples. */
   @JvmStatic
   fun main(args: Array<String>) {
@@ -104,5 +152,8 @@ object SceneDescriptionExtractorExample {
 
     println("\nRunning typed data example:")
     extractTypedDataExample()
+
+    println("\nRunning archetypes example:")
+    extractWithArchetypesExample()
   }
 }
