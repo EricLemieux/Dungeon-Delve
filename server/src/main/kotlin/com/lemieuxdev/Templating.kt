@@ -422,105 +422,277 @@ class TerminalDisplay() : Display {
   ): FlowContent.() -> Unit {
     logger.debug("Rendering terminal display")
     return {
+      // Add JavaScript for tab switching
+      script {
+        unsafe {
+          raw("""
+            function showTab(tabId) {
+              // Hide all tabs
+              document.querySelectorAll('[id$="-tab"]').forEach(tab => {
+                tab.classList.add('hidden');
+              });
+
+              // Show the selected tab
+              const selectedTab = document.getElementById(tabId);
+              if (selectedTab) {
+                selectedTab.classList.remove('hidden');
+              }
+
+              // Update active tab styling
+              document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('text-green-500', 'border-green-500');
+                button.classList.add('text-gray-500', 'border-transparent');
+              });
+
+              // Highlight active tab
+              const activeButton = document.querySelector('[onclick="showTab(\'' + tabId + '\')"]');
+              if (activeButton) {
+                activeButton.classList.remove('text-gray-500', 'border-transparent');
+                activeButton.classList.add('text-green-500', 'border-green-500');
+              }
+            }
+          """.trimIndent())
+        }
+      }
+
+      // Mobile tabs container - only visible on mobile
       div {
-        classes = "flex min-h-screen items-center justify-center bg-gray-900 p-4".split(" ").toSet()
+        classes = "md:hidden w-full bg-gray-900".split(" ").toSet()
 
+        // Tabs navigation
         div {
-          classes =
-              "relative w-full max-w-3xl overflow-hidden rounded-lg border-8 border-gray-800 bg-gray-900 shadow-2xl"
-                  .split(" ")
-                  .toSet()
+          classes = "flex border-b border-gray-800".split(" ").toSet()
 
-          // Monitor frame gradient
-          div {
-            classes =
-                "absolute inset-0 rounded-sm bg-gradient-to-b from-gray-800 to-gray-700 opacity-10"
-                    .split(" ")
-                    .toSet()
+          button {
+            classes = "tab-button flex-1 py-2 px-4 text-green-500 font-mono border-b-2 border-green-500 bg-gray-900".split(" ").toSet()
+            attributes["onclick"] = "showTab('main-tab')"
+            +"Main"
           }
-
-          // Power indicator
-          div {
-            classes = "absolute right-4 top-4 flex items-center gap-2".split(" ").toSet()
-
-            div {
-              classes =
-                  "h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_2px_rgba(74,222,128,0.6)]"
-                      .split(" ")
-                      .toSet()
-            }
-
-            // Terminal icon placeholder (you might need to add an actual icon here)
-            div { classes = "h-4 w-4 text-gray-600".split(" ").toSet() }
+          button {
+            classes = "tab-button flex-1 py-2 px-4 text-gray-500 font-mono border-b-2 border-transparent bg-gray-900".split(" ").toSet()
+            attributes["onclick"] = "showTab('stats-tab')"
+            +"Stats"
           }
+          button {
+            classes = "tab-button flex-1 py-2 px-4 text-gray-500 font-mono border-b-2 border-transparent bg-gray-900".split(" ").toSet()
+            attributes["onclick"] = "showTab('inventory-tab')"
+            +"Inventory"
+          }
+        }
+      }
 
-          // Screen with CRT effect
+      // Main container - flex on mobile, grid on desktop
+      div {
+        classes = "flex flex-col md:grid md:grid-cols-3 md:grid-rows-3 min-h-screen bg-gray-900 p-4 gap-4".split(" ").toSet()
+
+        // Main terminal display - full width on mobile, center cell on desktop
+        div {
+          id = "main-tab"
+          classes = "md:col-start-2 md:row-start-2 block".split(" ").toSet()
+
           div {
-            classes =
-                "relative overflow-hidden rounded-sm bg-black p-6 shadow-inner".split(" ").toSet()
+            classes = "relative w-full overflow-hidden rounded-lg border-8 border-gray-800 bg-gray-900 shadow-2xl".split(" ").toSet()
 
-            // CRT glow
+            // Monitor frame gradient
             div {
-              classes =
-                  "pointer-events-none absolute inset-0 rounded-sm bg-green-500 opacity-[0.03] mix-blend-screen"
-                      .split(" ")
-                      .toSet()
+              classes = "absolute inset-0 rounded-sm bg-gradient-to-b from-gray-800 to-gray-700 opacity-10".split(" ").toSet()
             }
 
-            // Scan lines
+            // Power indicator
             div {
-              classes =
-                  "pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent,transparent_2px,rgba(0,0,0,0.05)_3px,transparent_3px)] bg-[length:100%_4px]"
-                      .split(" ")
-                      .toSet()
-            }
+              classes = "absolute right-4 top-4 flex items-center gap-2".split(" ").toSet()
 
-            // Screen curvature
-            div {
-              classes =
-                  "pointer-events-none absolute inset-0 rounded-sm bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.3)_100%)]"
-                      .split(" ")
-                      .toSet()
-            }
-
-            // Terminal content
-            div {
-              classes =
-                  "flex flex-col gap-2 relative min-h-[60vh] font-mono text-sm text-green-500 md:text-base"
-                      .split(" ")
-                      .toSet()
-
-              // Output text
-              pre {
-                classes = "whitespace-pre-wrap".split(" ").toSet()
-                +sceneState.outputText
+              div {
+                classes = "h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_2px_rgba(74,222,128,0.6)]".split(" ").toSet()
               }
-              // Blinking cursor
-              if (sceneState.showCursor) {
-                span {
-                  classes = "inline-block h-4 w-2 animate-blink bg-green-500".split(" ").toSet()
-                  +" "
+
+              // Terminal icon placeholder
+              div { classes = "h-4 w-4 text-gray-600".split(" ").toSet() }
+            }
+
+            // Screen with CRT effect
+            div {
+              classes = "relative overflow-hidden rounded-sm bg-black p-6 shadow-inner".split(" ").toSet()
+
+              // CRT glow
+              div {
+                classes = "pointer-events-none absolute inset-0 rounded-sm bg-green-500 opacity-[0.03] mix-blend-screen".split(" ").toSet()
+              }
+
+              // Scan lines
+              div {
+                classes = "pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent,transparent_2px,rgba(0,0,0,0.05)_3px,transparent_3px)] bg-[length:100%_4px]".split(" ").toSet()
+              }
+
+              // Screen curvature
+              div {
+                classes = "pointer-events-none absolute inset-0 rounded-sm bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.3)_100%)]".split(" ").toSet()
+              }
+
+              // Terminal content
+              div {
+                classes = "flex flex-col gap-2 relative min-h-[60vh] font-mono text-sm text-green-500 md:text-base".split(" ").toSet()
+
+                // Output text
+                pre {
+                  classes = "whitespace-pre-wrap".split(" ").toSet()
+                  +sceneState.outputText
+                }
+
+                // Blinking cursor
+                if (sceneState.showCursor) {
+                  span {
+                    classes = "inline-block h-4 w-2 animate-blink bg-green-500".split(" ").toSet()
+                    +" "
+                  }
+                }
+
+                // Game controls
+                // Render buttons from scene state actions
+                for (action in sceneState.actions) {
+                  button {
+                    attributes["hx-post"] = "/action/${action.name}"
+                    attributes["hx-swap"] = "none"
+                    classes = "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4".split(" ").toSet()
+                    +action.name
+                  }
                 }
               }
+            }
 
-              // Game controls
-              // Render buttons from scene state actions
-              for (action in sceneState.actions) {
-                button {
-                  attributes["hx-post"] = "/action/${action.name}"
-                  attributes["hx-swap"] = "none"
-                  classes =
-                      "px-6 py-2 bg-green-600 hover:bg-green-700 text-black font-mono rounded border-2 border-green-500 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 active:bg-green-800 mb-4"
-                          .split(" ")
-                          .toSet()
-                  +action.name
-                }
-              }
+            // Monitor base
+            div { classes = "h-4 rounded-b-lg bg-gray-800".split(" ").toSet() }
+          }
+        }
+
+        // Stats panel - hidden on mobile, top-center on desktop
+        div {
+          id = "stats-tab"
+          classes = "hidden md:block md:col-start-2 md:row-start-1".split(" ").toSet()
+
+          div {
+            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
+            h2 { 
+              classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
+              +"Character Stats" 
+            }
+            div { 
+              classes = "font-mono text-green-500".split(" ").toSet()
+              +"Health: 100/100" 
             }
           }
+        }
 
-          // Monitor base
-          div { classes = "h-4 rounded-b-lg bg-gray-800".split(" ").toSet() }
+        // Inventory panel - hidden on mobile, right-center on desktop
+        div {
+          id = "inventory-tab"
+          classes = "hidden md:block md:col-start-3 md:row-start-2".split(" ").toSet()
+
+          div {
+            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
+            h2 { 
+              classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
+              +"Inventory" 
+            }
+            div { 
+              classes = "font-mono text-green-500".split(" ").toSet()
+              +"Gold: 250" 
+            }
+          }
+        }
+
+        // Map panel - left-center on desktop
+        div {
+          classes = "hidden md:block md:col-start-1 md:row-start-2".split(" ").toSet()
+
+          div {
+            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
+            h2 { 
+              classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
+              +"Map" 
+            }
+          }
+        }
+
+        // Journal panel - bottom-center on desktop
+        div {
+          classes = "hidden md:block md:col-start-2 md:row-start-3".split(" ").toSet()
+
+          div {
+            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
+            h2 { 
+              classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
+              +"Journal" 
+            }
+          }
+        }
+
+        // Skills panel - top-left on desktop
+        div {
+          classes = "hidden md:block md:col-start-1 md:row-start-1".split(" ").toSet()
+
+          div {
+            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
+            h2 { 
+              classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
+              +"Skills" 
+            }
+            div { 
+              classes = "font-mono text-green-500".split(" ").toSet()
+              +"Combat: 5" 
+            }
+          }
+        }
+
+        // Quests panel - top-right on desktop
+        div {
+          classes = "hidden md:block md:col-start-3 md:row-start-1".split(" ").toSet()
+
+          div {
+            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
+            h2 { 
+              classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
+              +"Quests" 
+            }
+            div { 
+              classes = "font-mono text-green-500".split(" ").toSet()
+              +"Active: 2" 
+            }
+          }
+        }
+
+        // Equipment panel - bottom-right on desktop
+        div {
+          classes = "hidden md:block md:col-start-3 md:row-start-3".split(" ").toSet()
+
+          div {
+            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
+            h2 { 
+              classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
+              +"Equipment" 
+            }
+            div { 
+              classes = "font-mono text-green-500".split(" ").toSet()
+              +"Weapon: Sword" 
+            }
+          }
+        }
+
+        // Notes panel - bottom-left on desktop
+        div {
+          classes = "hidden md:block md:col-start-1 md:row-start-3".split(" ").toSet()
+
+          div {
+            classes = "h-full p-4 rounded-lg border-4 border-gray-800 bg-gray-900 shadow-xl".split(" ").toSet()
+            h2 { 
+              classes = "text-xl font-mono text-green-500 mb-2".split(" ").toSet()
+              +"Notes" 
+            }
+            div { 
+              classes = "font-mono text-green-500".split(" ").toSet()
+              +"Remember to check the cave" 
+            }
+          }
         }
       }
     }
