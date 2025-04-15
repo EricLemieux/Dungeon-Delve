@@ -1111,6 +1111,26 @@ fun HTML.gameBoardWrapper(gameState: Game) {
     attributes["sse-swap"] = "message"
     attributes["hx-target"] = "#game-board"
 
+    // Admin controls
+    div {
+      classes = "bg-black p-4 border-b border-gray-800".split(" ").toSet()
+      div {
+        classes = "container mx-auto flex justify-between items-center".split(" ").toSet()
+        h2 {
+          classes = "text-purple-500 text-xl font-bold".split(" ").toSet()
+          +"Dungeon Delve Admin"
+        }
+        div {
+          classes = "flex space-x-4".split(" ").toSet()
+          a {
+            href = "/create-scene"
+            classes = "px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition".split(" ").toSet()
+            +"Create New Scene"
+          }
+        }
+      }
+    }
+
     main { gameBoard(game) }
   }
 }
@@ -1268,6 +1288,121 @@ fun HTML.llmForm() {
   }
 }
 
+// HTML template for the scene creation form
+fun HTML.sceneCreationForm() {
+  head {
+    title { +"Create New Scene" }
+    meta(name = "viewport", content = "width=device-width, initial-scale=1.0")
+    link(rel = "stylesheet", href = "/static/output.css")
+    script(src = "https://unpkg.com/htmx.org@2.0.4") {}
+  }
+  body {
+    div {
+      classes = "flex min-h-screen items-center justify-center bg-gray-900 p-4".split(" ").toSet()
+
+      div {
+        classes =
+            "w-full max-w-md rounded-lg border-2 border-purple-500 bg-black p-6 shadow-lg"
+                .split(" ")
+                .toSet()
+
+        h1 {
+          classes = "mb-6 text-2xl font-bold text-purple-500".split(" ").toSet()
+          +"Create New Scene"
+        }
+
+        form {
+          id = "scene-form"
+          attributes["hx-post"] = "/create-scene"
+          attributes["hx-target"] = "#result-container"
+
+          // Scene Name
+          div {
+            classes = "mb-4".split(" ").toSet()
+            label {
+              classes = "mb-2 block text-sm font-medium text-purple-500".split(" ").toSet()
+              htmlFor = "scene-name-input"
+              +"Scene Name"
+            }
+            input {
+              classes =
+                  "w-full rounded border border-purple-500 bg-black p-2 text-purple-500 focus:border-purple-700 focus:outline-none"
+                      .split(" ")
+                      .toSet()
+              id = "scene-name-input"
+              attributes["name"] = "sceneName"
+              attributes["type"] = "text"
+              attributes["required"] = "true"
+              attributes["placeholder"] = "Enter a name for the scene..."
+            }
+          }
+
+          // Scene Output Text
+          div {
+            classes = "mb-4".split(" ").toSet()
+            label {
+              classes = "mb-2 block text-sm font-medium text-purple-500".split(" ").toSet()
+              htmlFor = "output-text-input"
+              +"Scene Description"
+            }
+            textArea {
+              classes =
+                  "w-full rounded border border-purple-500 bg-black p-2 text-purple-500 focus:border-purple-700 focus:outline-none"
+                      .split(" ")
+                      .toSet()
+              id = "output-text-input"
+              attributes["name"] = "outputText"
+              attributes["rows"] = "5"
+              attributes["required"] = "true"
+              attributes["placeholder"] = "Enter the narrative text for the scene..."
+            }
+          }
+
+          // Action Name
+          div {
+            classes = "mb-4".split(" ").toSet()
+            label {
+              classes = "mb-2 block text-sm font-medium text-purple-500".split(" ").toSet()
+              htmlFor = "action-name-input"
+              +"Action Name"
+            }
+            input {
+              classes =
+                  "w-full rounded border border-purple-500 bg-black p-2 text-purple-500 focus:border-purple-700 focus:outline-none"
+                      .split(" ")
+                      .toSet()
+              id = "action-name-input"
+              attributes["name"] = "actionName"
+              attributes["type"] = "text"
+              attributes["required"] = "true"
+              attributes["placeholder"] = "Enter a name for the action..."
+            }
+          }
+
+          // Submit Button
+          button {
+            classes =
+                "w-full rounded bg-purple-600 px-4 py-2 font-bold text-black hover:bg-purple-700 focus:outline-none"
+                    .split(" ")
+                    .toSet()
+            type = ButtonType.submit
+            +"Create Scene"
+          }
+        }
+
+        div {
+          id = "result-container"
+          classes =
+              "mt-6 p-4 rounded border border-purple-500 bg-black text-purple-500 min-h-[100px] whitespace-pre-wrap"
+                  .split(" ")
+                  .toSet()
+          +"Result will appear here..."
+        }
+      }
+    }
+  }
+}
+
 // HTML template for the text-to-speech form
 fun HTML.textToSpeechForm() {
   head {
@@ -1366,6 +1501,12 @@ fun Application.configureTemplating() {
       logger.debug("Handling GET request for text-to-speech form")
       call.respondHtml { textToSpeechForm() }
       logger.debug("Responded to GET request for text-to-speech form")
+    }
+
+    get("/create-scene") {
+      logger.debug("Handling GET request for scene creation form")
+      call.respondHtml { sceneCreationForm() }
+      logger.debug("Responded to GET request for scene creation form")
     }
 
     post("/llm") {
@@ -1573,6 +1714,82 @@ fun Application.configureTemplating() {
       sseEvents.emit(gameBoard)
 
       call.respondHtml(HttpStatusCode.OK) {}
+    }
+
+    post("/create-scene") {
+      logger.debug("Handling POST request for scene creation")
+
+      // Get the form parameters
+      val formParameters = call.receiveParameters()
+      val sceneName = formParameters["sceneName"] ?: ""
+      val outputText = formParameters["outputText"] ?: ""
+      val actionName = formParameters["actionName"] ?: ""
+
+      logger.debug("Received scene creation parameters: name=$sceneName, action=$actionName")
+
+      if (sceneName.isBlank() || outputText.isBlank() || actionName.isBlank()) {
+        logger.debug("One or more required parameters are blank, returning error")
+        val errorHtml =
+            createHTML().div {
+              classes = "text-red-500".split(" ").toSet()
+              +"Please fill in all required fields."
+            }
+        call.respondText(errorHtml, ContentType.Text.Html)
+        return@post
+      }
+
+      try {
+        // Create a new scene with the provided parameters
+        logger.debug("Creating new scene: $sceneName")
+
+        // Create an action that returns to the root scene when clicked
+        val sceneAction = Action(actionName) {
+          logger.debug("Executing action: $actionName")
+          // You can add custom logic here for what happens when the action is clicked
+          // For now, we'll just update the output text
+          sceneState.outputText += "\nYou chose: $actionName"
+        }
+
+        // Create a new scene state with the provided parameters
+        val newSceneState = DefaultSceneState(
+          outputText = outputText,
+          actions = listOf(sceneAction),
+          showCursor = true
+        )
+
+        // Create a new scene with the new state
+        val newScene = object : Scene {
+          override var state: SceneState = newSceneState
+        }
+
+        // Update the current scene to the new scene
+        currentScene = newScene
+
+        logger.debug("Scene created successfully: $sceneName")
+
+        // Update the game board
+        val gameBoard = createHTML().main { gameBoard(game) }
+        sseEvents.emit(gameBoard)
+
+        // Return success message with redirect
+        val successHtml =
+            createHTML().div {
+              classes = "text-green-500".split(" ").toSet()
+              +"Scene created successfully! Redirecting to game board..."
+              script {
+                +"setTimeout(function() { window.location.href = '/'; }, 2000);"
+              }
+            }
+        call.respondText(successHtml, ContentType.Text.Html)
+      } catch (e: Exception) {
+        logger.error("Error creating scene: ${e.message}", e)
+        val errorHtml =
+            createHTML().div {
+              classes = "text-red-500".split(" ").toSet()
+              +"Error creating scene: ${e.message ?: "Unknown error"}"
+            }
+        call.respondText(errorHtml, ContentType.Text.Html)
+      }
     }
 
     sse("/events") {
